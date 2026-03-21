@@ -261,7 +261,7 @@ export function createCampaignCommand(): Command {
   campaign
     .command("progress")
     .description("Check your progress in a campaign")
-    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
+    .option("-c, --chain-id <id>", "Chain ID", Number, 137)
     .requiredOption("-a, --address <address>", "Campaign escrow address")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
@@ -297,7 +297,7 @@ export function createCampaignCommand(): Command {
   campaign
     .command("leaderboard")
     .description("View campaign leaderboard")
-    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
+    .option("-c, --chain-id <id>", "Chain ID", Number, 137)
     .requiredOption("-a, --address <address>", "Campaign escrow address")
     .option(
       "-r, --rank-by <field>",
