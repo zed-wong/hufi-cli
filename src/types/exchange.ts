@@ -11,7 +11,8 @@ export interface ExchangeRegistration {
 }
 
 export interface ExchangeInfo {
-  id: string;
   exchange_name: string;
-  created_at?: string;
+  api_key: string;
+  is_valid: boolean;
+  missing_permissions: string[];
 }

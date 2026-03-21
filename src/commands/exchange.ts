@@ -78,7 +78,8 @@ export function createExchangeCommand(): Command {
             printText("No exchange API keys registered.");
           } else {
             for (const key of keys) {
-              printText(`- ${key.exchange_name} (ID: ${key.id})`);
+              const status = key.is_valid ? "valid" : "invalid";
+              printText(`- ${key.exchange_name} (${maskSecret(key.api_key)}) [${status}]`);
             }
           }
         }
