@@ -44,3 +44,30 @@ export async function listJoinedCampaigns(
     }
   )) as CampaignListResult;
 }
+
+export async function getMyProgress(
+  baseUrl: string,
+  accessToken: string,
+  chainId: number,
+  campaignAddress: string
+): Promise<unknown> {
+  return requestJson(
+    `${baseUrl}/campaigns/${chainId}-${campaignAddress}/my-progress`,
+    {
+      method: "GET",
+      headers: authHeaders(accessToken),
+    }
+  );
+}
+
+export async function getLeaderboard(
+  baseUrl: string,
+  chainId: number,
+  campaignAddress: string,
+  rankBy: string,
+  limit = 20
+): Promise<{ data: { address: string; result: number }[] }> {
+  return (await requestJson(
+    `${baseUrl}/campaigns/${chainId}-${campaignAddress}/leaderboard?rankBy=${rankBy}&limit=${limit}`
+  )) as { data: { address: string; result: number }[] };
+}

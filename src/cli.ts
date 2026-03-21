@@ -28,7 +28,7 @@ const BASH_COMPLETION = [
   "      return 0",
   "      ;;",
   "    campaign)",
-  '      COMPREPLY=( $(compgen -W "list get joined status join help" -- "$cur") )',
+  '      COMPREPLY=( $(compgen -W "list get joined status join progress leaderboard help" -- "$cur") )',
   "      return 0",
   "      ;;",
   "  esac",
@@ -73,7 +73,7 @@ const ZSH_COMPLETION = [
   "          ;;",
   "        campaign)",
   "          _arguments \\",
-  "            '1:subcommand:(list get joined status join help)'",
+  "            '1:subcommand:(list get joined status join progress leaderboard help)'",
   "          ;;",
   "      esac",
   "      ;;",
@@ -108,6 +108,8 @@ const FISH_COMPLETION = [
   "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a joined -d 'List joined campaigns'",
   "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a status -d 'Check join status'",
   "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a join -d 'Join a campaign'",
+  "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a progress -d 'Check your progress'",
+  "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a leaderboard -d 'View leaderboard'",
   "",
   "# Global options",
   "complete -c hufi -l help -d 'Show help'",
@@ -120,7 +122,7 @@ const program = new Command();
 program
   .name("hufi")
   .description("CLI tool for hu.fi DeFi platform")
-  .version("0.2.4");
+  .version("0.3.0");
 
 program
   .command("completion")

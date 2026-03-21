@@ -3,6 +3,8 @@ import {
   checkJoinStatus,
   joinCampaign,
   listJoinedCampaigns,
+  getMyProgress,
+  getLeaderboard,
 } from "../services/recording/campaign.ts";
 import {
   listLauncherCampaigns,
@@ -252,6 +254,85 @@ export function createCampaignCommand(): Command {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to join campaign: ${message}`);
+        process.exitCode = 1;
+      }
+    });
+
+  campaign
+    .command("progress")
+    .description("Check your progress in a campaign")
+    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
+    .requiredOption("-a, --address <address>", "Campaign escrow address")
+    .option("--json", "Output as JSON")
+    .action(async (opts) => {
+      const { baseUrl, accessToken } = requireAuth();
+
+      try {
+        const result = await getMyProgress(
+          baseUrl,
+          accessToken,
+          opts.chainId,
+          opts.address
+        );
+
+        if (opts.json) {
+          printJson(result);
+        } else {
+          const r = result as Record<string, unknown>;
+          if (r.message) {
+            printText(String(r.message));
+          } else {
+            for (const [key, value] of Object.entries(r)) {
+              printText(`  ${key}: ${value}`);
+            }
+          }
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Failed to get progress: ${message}`);
+        process.exitCode = 1;
+      }
+    });
+
+  campaign
+    .command("leaderboard")
+    .description("View campaign leaderboard")
+    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
+    .requiredOption("-a, --address <address>", "Campaign escrow address")
+    .option(
+      "-r, --rank-by <field>",
+      "Rank by (rewards, current_progress)",
+      "rewards"
+    )
+    .option("-l, --limit <n>", "Max results", Number, 20)
+    .option("--json", "Output as JSON")
+    .action(async (opts) => {
+      try {
+        const baseUrl = loadConfig().recordingApiUrl.replace(/\/+$/, "");
+        const result = await getLeaderboard(
+          baseUrl,
+          opts.chainId,
+          opts.address,
+          opts.rankBy,
+          opts.limit
+        );
+
+        if (opts.json) {
+          printJson(result);
+        } else {
+          const entries = result.data ?? [];
+          if (entries.length === 0) {
+            printText("No leaderboard entries.");
+          } else {
+            printText(`Leaderboard (${opts.rankBy}):\n`);
+            entries.forEach((entry, i) => {
+              printText(`  ${i + 1}. ${entry.address}  ${entry.result}`);
+            });
+          }
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Failed to get leaderboard: ${message}`);
         process.exitCode = 1;
       }
     });
