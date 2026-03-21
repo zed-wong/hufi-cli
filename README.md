@@ -12,31 +12,31 @@ bun install
 
 ```bash
 # Show help
-bun src/cli.ts --help
+bunx hufi-cli --help
 
 # Authenticate
-bun src/cli.ts auth login --private-key 0x...
+bunx hufi-cli auth login --private-key 0x...
 
 # Generate a new wallet
-bun src/cli.ts auth generate
+bunx hufi-cli auth generate
 
 # Check auth status
-bun src/cli.ts auth status
+bunx hufi-cli auth status
 
 # Register exchange API key
-bun src/cli.ts exchange register --name mexc --api-key xxx --secret-key yyy
+bunx hufi-cli exchange register --name mexc --api-key xxx --secret-key yyy
 
 # List exchange API keys
-bun src/cli.ts exchange list
+bunx hufi-cli exchange list
 
 # Check campaign join status
-bun src/cli.ts campaign status --chain-id 137 --address 0x...
+bunx hufi-cli campaign status --chain-id 137 --address 0x...
 
 # Join a campaign
-bun src/cli.ts campaign join --chain-id 137 --address 0x...
+bunx hufi-cli campaign join --chain-id 137 --address 0x...
 
 # List joined campaigns
-bun src/cli.ts campaign list --limit 20
+bunx hufi-cli campaign list --limit 20
 ```
 
 ## Global Options
@@ -56,7 +56,7 @@ Configuration is stored at `~/.hufi-cli/config.json`.
 
 ```bash
 # Run directly
-bun src/cli.ts --help
+bunx hufi-cli --help
 
 # Run tests
 bun test

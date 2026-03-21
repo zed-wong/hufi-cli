@@ -85,13 +85,21 @@ export function createCampaignCommand(): Command {
               const key = `${c.chain_id}:${c.address}`;
               const joined = joinedKeys.has(key);
               const tag = joined ? " [JOINED]" : "";
+              const decimals = c.fund_token_decimals ?? 0;
+              const div = Math.pow(10, decimals);
+              const fmt = (v: string) => (Number(v) / div).toLocaleString(undefined, { maximumFractionDigits: decimals });
+              const fundAmount = Number(c.fund_amount);
+              const balanceNum = Number(c.balance);
+              const pct = fundAmount > 0 ? ((balanceNum / fundAmount) * 100).toFixed(1) : "0.0";
               printText(
                 `  ${c.exchange_name} ${c.symbol} (${c.type})${tag}`
               );
-              printText(`    address: ${c.address}`);
-              printText(`    status: ${c.status}`);
+              printText(`    chain:      ${c.chain_id}`);
+              printText(`    address:    ${c.address}`);
+              printText(`    status:     ${c.status}`);
+              printText(`    duration:   ${c.start_date?.split("T")[0] ?? "-"} ~ ${c.end_date?.split("T")[0] ?? "-"}`);
               printText(
-                `    funded: ${c.fund_amount} ${c.fund_token_symbol}  balance: ${c.balance}`
+                `    funded:     ${fmt(c.fund_amount)} ${c.fund_token_symbol}  paid: ${fmt(c.amount_paid)}  balance: ${fmt(c.balance)} (${pct}%)`
               );
               printText("");
             }
