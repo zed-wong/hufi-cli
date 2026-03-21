@@ -47,6 +47,22 @@ bunx hufi-cli campaign list --limit 20
 
 Configuration is stored at `~/.hufi-cli/config.json`.
 
+## Capabilities
+
+### What This CLI Can Do
+
+| Module | Commands | Description |
+|--------|----------|-------------|
+| **auth** | login, generate, status | Authentication & wallet management |
+| **exchange** | register, list | Exchange API key management |
+| **campaign** | list, get, joined, join, status, progress, leaderboard | Campaign browsing, joining, and monitoring |
+
+### What This CLI Cannot Do
+
+- ❌ Execute on-chain transactions
+- ❌ Configure trading strategies
+- ❌ Multi-signature or voting operations
+
 ## API Endpoints
 
 - Recording Oracle: `https://ro.hu.finance`
