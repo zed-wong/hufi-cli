@@ -61,6 +61,36 @@ describe("CLI help", () => {
     expect(stdout).toContain("list");
     expect(stdout).toContain("get");
   });
+
+  test("completion --help shows completion command", async () => {
+    const { code, stdout } = await runCli(["--help"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("completion");
+  });
+});
+
+describe("completion scripts", () => {
+  test("completion outputs bash script by default", async () => {
+    const { code, stdout } = await runCli(["completion"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("_hufi_completions");
+    expect(stdout).toContain("complete -F _hufi_completions hufi");
+    expect(stdout).toContain("COMPREPLY");
+  });
+
+  test("completion --zsh outputs zsh script", async () => {
+    const { code, stdout } = await runCli(["completion", "--zsh"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("#compdef hufi");
+    expect(stdout).toContain("_hufi()");
+  });
+
+  test("completion --fish outputs fish script", async () => {
+    const { code, stdout } = await runCli(["completion", "--fish"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("# hufi completions for fish");
+    expect(stdout).toContain("complete -c hufi");
+  });
 });
 
 describe("auth commands", () => {
