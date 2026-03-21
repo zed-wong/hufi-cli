@@ -1,12 +1,29 @@
 {
   "name": "hufi-cli",
-  "version": "0.0.1",
-  "module": "index.ts",
+  "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "hufi": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun src/cli.ts",
+    "build": "bun build ./src/cli.ts --outdir ./dist --target node",
+    "test": "bun test",
+    "lint": "bunx eslint src/",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "ethers": "^6.13.0"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
 }
