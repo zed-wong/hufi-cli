@@ -7,9 +7,10 @@ import type {
 export async function listLauncherCampaigns(
   baseUrl: string,
   chainId: number,
-  limit = 20
+  limit = 20,
+  status = "active"
 ): Promise<LauncherCampaignList> {
-  const url = `${baseUrl}/campaigns?chain_id=${chainId}&limit=${limit}`;
+  const url = `${baseUrl}/campaigns?chain_id=${chainId}&status=${status}&limit=${limit}`;
   return (await requestJson(url)) as LauncherCampaignList;
 }
 

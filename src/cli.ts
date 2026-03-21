@@ -120,7 +120,7 @@ const program = new Command();
 program
   .name("hufi")
   .description("CLI tool for hu.fi DeFi platform")
-  .version("0.2.2");
+  .version("0.2.3");
 
 program
   .command("completion")

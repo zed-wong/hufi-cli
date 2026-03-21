@@ -48,12 +48,6 @@ describe("CLI help", () => {
     expect(stdout).toContain("join");
   });
 
-  test("campaign list requires --chain-id", async () => {
-    const { code, stderr } = await runCli(["campaign", "list"]);
-    expect(code).not.toBe(0);
-    expect(stderr).toContain("required option");
-  });
-
   test("exchange --help shows exchange commands", async () => {
     const { code, stdout } = await runCli(["exchange", "--help"]);
     expect(code).toBe(0);

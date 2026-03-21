@@ -36,8 +36,9 @@ export function createCampaignCommand(): Command {
 
   campaign
     .command("list")
-    .description("List all available campaigns")
-    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
+    .description("List available campaigns")
+    .option("-c, --chain-id <id>", "Chain ID", Number, 137)
+    .option("-s, --status <status>", "Filter by status (active, completed, cancelled, to_cancel)", "active")
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
@@ -46,7 +47,8 @@ export function createCampaignCommand(): Command {
         const launcherResult = await listLauncherCampaigns(
           getLauncherUrl(),
           opts.chainId,
-          opts.limit
+          opts.limit,
+          opts.status
         );
 
         let joinedKeys = new Set<string>();
@@ -90,6 +92,9 @@ export function createCampaignCommand(): Command {
                 `    funded: ${c.fund_amount} ${c.fund_token_symbol}  balance: ${c.balance}`
               );
               printText("");
+            }
+            if (opts.status === "active") {
+              printText("Tip: use --status completed, --status cancelled, or --status to_cancel to see other campaigns.");
             }
           }
         }
