@@ -108,3 +108,7 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 ## Versioning
 
 Every code change must bump the version number in both `package.json` and `src/cli.ts`. Use `0.patch.0` format for minor fixes, `0.minor.0` for new features. Always rebuild (`bun run build`) after bumping.
+
+## Documentation
+
+After any major change (new commands, API changes, refactors), update `README.md` to reflect the current usage. Keep command examples, options, and install instructions in sync with the actual CLI behavior.
