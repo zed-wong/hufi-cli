@@ -22,7 +22,6 @@ describe("CLI help", () => {
     expect(stdout).toContain("auth");
     expect(stdout).toContain("exchange");
     expect(stdout).toContain("campaign");
-    expect(stdout).toContain("launcher");
   });
 
   test("--version shows version", async () => {
@@ -42,9 +41,17 @@ describe("CLI help", () => {
   test("campaign --help shows campaign commands", async () => {
     const { code, stdout } = await runCli(["campaign", "--help"]);
     expect(code).toBe(0);
+    expect(stdout).toContain("list");
+    expect(stdout).toContain("get");
+    expect(stdout).toContain("joined");
     expect(stdout).toContain("status");
     expect(stdout).toContain("join");
-    expect(stdout).toContain("list");
+  });
+
+  test("campaign list requires --chain-id", async () => {
+    const { code, stderr } = await runCli(["campaign", "list"]);
+    expect(code).not.toBe(0);
+    expect(stderr).toContain("required option");
   });
 
   test("exchange --help shows exchange commands", async () => {
@@ -54,21 +61,7 @@ describe("CLI help", () => {
     expect(stdout).toContain("list");
   });
 
-  test("launcher --help shows launcher commands", async () => {
-    const { code, stdout } = await runCli(["launcher", "--help"]);
-    expect(code).toBe(0);
-    expect(stdout).toContain("Campaign Launcher");
-    expect(stdout).toContain("list");
-    expect(stdout).toContain("get");
-  });
-
-  test("launcher list requires --chain-id", async () => {
-    const { code, stderr } = await runCli(["launcher", "list"]);
-    expect(code).not.toBe(0);
-    expect(stderr).toContain("required option");
-  });
-
-  test("completion --help shows completion command", async () => {
+  test("--help shows completion command", async () => {
     const { code, stdout } = await runCli(["--help"]);
     expect(code).toBe(0);
     expect(stdout).toContain("completion");

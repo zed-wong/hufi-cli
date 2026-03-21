@@ -4,7 +4,6 @@ import { Command } from "commander";
 import { createAuthCommand } from "./commands/auth.ts";
 import { createExchangeCommand } from "./commands/exchange.ts";
 import { createCampaignCommand } from "./commands/campaign.ts";
-import { createLauncherCommand } from "./commands/launcher.ts";
 
 const BASH_COMPLETION = [
   "_hufi_completions() {",
@@ -13,7 +12,7 @@ const BASH_COMPLETION = [
   '  cur="${COMP_WORDS[COMP_CWORD]}"',
   '  prev="${COMP_WORDS[COMP_CWORD-1]}"',
   "",
-  '  commands="auth exchange campaign launcher completion help"',
+  '  commands="auth exchange campaign completion help"',
   "",
   '  case "$prev" in',
   "    hufi)",
@@ -29,11 +28,7 @@ const BASH_COMPLETION = [
   "      return 0",
   "      ;;",
   "    campaign)",
-  '      COMPREPLY=( $(compgen -W "status join list help" -- "$cur") )',
-  "      return 0",
-  "      ;;",
-  "    launcher)",
-  '      COMPREPLY=( $(compgen -W "list get help" -- "$cur") )',
+  '      COMPREPLY=( $(compgen -W "list get joined status join help" -- "$cur") )',
   "      return 0",
   "      ;;",
   "  esac",
@@ -54,7 +49,6 @@ const ZSH_COMPLETION = [
   "    'auth:Authentication commands'",
   "    'exchange:Exchange API key management'",
   "    'campaign:Campaign management'",
-  "    'launcher:Campaign Launcher commands'",
   "    'completion:Generate shell completion script'",
   "    'help:Display help'",
   "  )",
@@ -79,11 +73,7 @@ const ZSH_COMPLETION = [
   "          ;;",
   "        campaign)",
   "          _arguments \\",
-  "            '1:subcommand:(status join list help)'",
-  "          ;;",
-  "        launcher)",
-  "          _arguments \\",
-  "            '1:subcommand:(list get help)'",
+  "            '1:subcommand:(list get joined status join help)'",
   "          ;;",
   "      esac",
   "      ;;",
@@ -101,7 +91,6 @@ const FISH_COMPLETION = [
   "complete -c hufi -n '__fish_use_subcommand' -a auth -d 'Authentication commands'",
   "complete -c hufi -n '__fish_use_subcommand' -a exchange -d 'Exchange API key management'",
   "complete -c hufi -n '__fish_use_subcommand' -a campaign -d 'Campaign management'",
-  "complete -c hufi -n '__fish_use_subcommand' -a launcher -d 'Campaign Launcher commands'",
   "complete -c hufi -n '__fish_use_subcommand' -a completion -d 'Generate shell completion script'",
   "",
   "# auth subcommands",
@@ -114,13 +103,11 @@ const FISH_COMPLETION = [
   "complete -c hufi -n '__fish_seen_subcommand_from exchange' -a list -d 'List exchange API keys'",
   "",
   "# campaign subcommands",
+  "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a list -d 'List available campaigns'",
+  "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a get -d 'Get campaign details'",
+  "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a joined -d 'List joined campaigns'",
   "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a status -d 'Check join status'",
   "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a join -d 'Join a campaign'",
-  "complete -c hufi -n '__fish_seen_subcommand_from campaign' -a list -d 'List joined campaigns'",
-  "",
-  "# launcher subcommands",
-  "complete -c hufi -n '__fish_seen_subcommand_from launcher' -a list -d 'List available campaigns'",
-  "complete -c hufi -n '__fish_seen_subcommand_from launcher' -a get -d 'Get campaign details'",
   "",
   "# Global options",
   "complete -c hufi -l help -d 'Show help'",
@@ -133,7 +120,7 @@ const program = new Command();
 program
   .name("hufi")
   .description("CLI tool for hu.fi DeFi platform")
-  .version("0.2.1");
+  .version("0.2.2");
 
 program
   .command("completion")
@@ -154,6 +141,5 @@ program
 program.addCommand(createAuthCommand());
 program.addCommand(createExchangeCommand());
 program.addCommand(createCampaignCommand());
-program.addCommand(createLauncherCommand());
 
 program.parse();
