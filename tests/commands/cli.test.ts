@@ -62,6 +62,12 @@ describe("CLI help", () => {
     expect(stdout).toContain("get");
   });
 
+  test("launcher list requires --chain-id", async () => {
+    const { code, stderr } = await runCli(["launcher", "list"]);
+    expect(code).not.toBe(0);
+    expect(stderr).toContain("required option");
+  });
+
   test("completion --help shows completion command", async () => {
     const { code, stdout } = await runCli(["--help"]);
     expect(code).toBe(0);

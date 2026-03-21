@@ -7,28 +7,6 @@ import { listJoinedCampaigns } from "../services/recording/campaign.ts";
 import { loadConfig } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 
-function requireAuth(): {
-  recordingUrl: string;
-  launcherUrl: string;
-  accessToken: string;
-  address: string;
-} {
-  const config = loadConfig();
-  if (!config.accessToken || !config.address) {
-    printText("Not authenticated. Run: hufi auth login --private-key <key>");
-    process.exit(1);
-  }
-  return {
-    recordingUrl: config.recordingApiUrl.replace(/\/+$/, ""),
-    launcherUrl: (config.launcherApiUrl ?? "https://cl.hu.finance").replace(
-      /\/+$/,
-      ""
-    ),
-    accessToken: config.accessToken,
-    address: config.address,
-  };
-}
-
 export function createLauncherCommand(): Command {
   const launcher = new Command("launcher").description(
     "Campaign Launcher commands"
@@ -36,26 +14,43 @@ export function createLauncherCommand(): Command {
 
   launcher
     .command("list")
-    .description("List campaigns from Campaign Launcher")
+    .description("List all available campaigns")
+    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { recordingUrl, launcherUrl, accessToken } = requireAuth();
+      const config = loadConfig();
+      const launcherUrl = (config.launcherApiUrl ?? "https://cl.hu.finance").replace(
+        /\/+$/,
+        ""
+      );
 
       try {
-        const [launcherResult, joinedResult] = await Promise.all([
-          listLauncherCampaigns(launcherUrl, accessToken, opts.limit),
-          listJoinedCampaigns(recordingUrl, accessToken, 100).catch(
-            () => ({ results: [] })
-          ),
-        ]);
-
-        const joinedKeys = new Set(
-          (joinedResult.results ?? []).map((c) => {
-            const r = c as Record<string, unknown>;
-            return `${r.chain_id ?? ""}:${r.escrow_address ?? r.address ?? c.id}`;
-          })
+        const launcherResult = await listLauncherCampaigns(
+          launcherUrl,
+          opts.chainId,
+          opts.limit
         );
+
+        let joinedKeys = new Set<string>();
+        if (config.accessToken) {
+          const recordingUrl = config.recordingApiUrl.replace(/\/+$/, "");
+          try {
+            const joinedResult = await listJoinedCampaigns(
+              recordingUrl,
+              config.accessToken,
+              100
+            );
+            joinedKeys = new Set(
+              (joinedResult.results ?? []).map((c) => {
+                const r = c as Record<string, unknown>;
+                return `${r.chain_id ?? ""}:${r.escrow_address ?? r.address ?? c.id}`;
+              })
+            );
+          } catch {
+            // ignore - joined list is optional
+          }
+        }
 
         if (opts.json) {
           printJson(launcherResult);
@@ -66,14 +61,16 @@ export function createLauncherCommand(): Command {
           } else {
             printText(`Available campaigns (${campaigns.length}):\n`);
             for (const c of campaigns) {
-              const key = `${c.chain_id ?? ""}:${c.escrow_address ?? c.id}`;
+              const key = `${c.chain_id}:${c.address}`;
               const joined = joinedKeys.has(key);
               const tag = joined ? " [JOINED]" : "";
-              printText(`  ${c.name ?? c.id}${tag}`);
-              if (c.escrow_address)
-                printText(`    address: ${c.escrow_address}`);
               printText(
-                `    chain: ${c.chain_id ?? "?"}  status: ${c.status ?? "?"}`
+                `  ${c.exchange_name} ${c.symbol} (${c.type})${tag}`
+              );
+              printText(`    address: ${c.address}`);
+              printText(`    status: ${c.status}`);
+              printText(
+                `    funded: ${c.fund_amount} ${c.fund_token_symbol}  balance: ${c.balance}`
               );
               printText("");
             }
@@ -81,36 +78,44 @@ export function createLauncherCommand(): Command {
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        printText(`Failed to list launcher campaigns: ${message}`);
+        printText(`Failed to list campaigns: ${message}`);
         process.exitCode = 1;
       }
     });
 
   launcher
-    .command("get <campaignId>")
-    .description("Get campaign details by ID")
+    .command("get")
+    .description("Get campaign details")
+    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
+    .requiredOption("-a, --address <addr>", "Campaign address")
     .option("--json", "Output as JSON")
-    .action(async (campaignId: string, opts) => {
-      const { launcherUrl, accessToken } = requireAuth();
+    .action(async (opts) => {
+      const config = loadConfig();
+      const launcherUrl = (config.launcherApiUrl ?? "https://cl.hu.finance").replace(
+        /\/+$/,
+        ""
+      );
 
       try {
         const campaign = await getLauncherCampaign(
           launcherUrl,
-          accessToken,
-          campaignId
+          opts.chainId,
+          opts.address
         );
 
         if (opts.json) {
           printJson(campaign);
         } else {
-          printText(`Name: ${campaign.name ?? "N/A"}`);
-          printText(`ID: ${campaign.id}`);
-          printText(`Chain: ${campaign.chain_id ?? "N/A"}`);
-          if (campaign.escrow_address)
-            printText(`Escrow: ${campaign.escrow_address}`);
-          if (campaign.status) printText(`Status: ${campaign.status}`);
-          if (campaign.start_time) printText(`Start: ${campaign.start_time}`);
-          if (campaign.end_time) printText(`End: ${campaign.end_time}`);
+          printText(`${campaign.exchange_name} ${campaign.symbol} (${campaign.type})`);
+          printText(`  address:    ${campaign.address}`);
+          printText(`  chain:      ${campaign.chain_id}`);
+          printText(`  status:     ${campaign.status}`);
+          printText(`  funded:     ${campaign.fund_amount} ${campaign.fund_token_symbol}`);
+          printText(`  balance:    ${campaign.balance} ${campaign.fund_token_symbol}`);
+          printText(`  paid:       ${campaign.amount_paid} ${campaign.fund_token_symbol}`);
+          printText(`  start:      ${campaign.start_date}`);
+          printText(`  end:        ${campaign.end_date}`);
+          printText(`  launcher:   ${campaign.launcher}`);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
