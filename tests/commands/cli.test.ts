@@ -22,6 +22,7 @@ describe("CLI help", () => {
     expect(stdout).toContain("auth");
     expect(stdout).toContain("exchange");
     expect(stdout).toContain("campaign");
+    expect(stdout).toContain("launcher");
   });
 
   test("--version shows version", async () => {
@@ -51,6 +52,14 @@ describe("CLI help", () => {
     expect(code).toBe(0);
     expect(stdout).toContain("register");
     expect(stdout).toContain("list");
+  });
+
+  test("launcher --help shows launcher commands", async () => {
+    const { code, stdout } = await runCli(["launcher", "--help"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("Campaign Launcher");
+    expect(stdout).toContain("list");
+    expect(stdout).toContain("get");
   });
 });
 

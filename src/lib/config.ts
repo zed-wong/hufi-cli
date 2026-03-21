@@ -8,6 +8,7 @@ const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 const DEFAULT_CONFIG: Config = {
   recordingApiUrl: "https://ro.hu.finance",
+  launcherApiUrl: "https://cl.hu.finance",
 };
 
 function ensureConfigDir() {

@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "hufi": "./src/cli.ts"
+    "hufi": "./dist/cli.js"
   },
   "scripts": {
     "dev": "bun src/cli.ts",
-    "build": "bun build ./src/cli.ts --outdir ./dist --target node",
+    "build": "bun build ./src/cli.ts --outfile ./dist/cli.js --target node",
+    "prepublishOnly": "bun run build",
     "test": "bun test",
-    "lint": "bunx eslint src/",
     "typecheck": "bunx tsc --noEmit"
   },
   "dependencies": {
