@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name("hufi")
   .description("CLI tool for hu.fi DeFi platform")
-  .version("0.1.1");
+  .version("0.1.3");
 
 program.addCommand(createAuthCommand());
 program.addCommand(createExchangeCommand());

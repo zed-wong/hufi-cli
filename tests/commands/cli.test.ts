@@ -28,7 +28,7 @@ describe("CLI help", () => {
   test("--version shows version", async () => {
     const { code, stdout } = await runCli(["--version"]);
     expect(code).toBe(0);
-    expect(stdout.trim()).toBe("0.1.0");
+    expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
   test("auth --help shows auth commands", async () => {

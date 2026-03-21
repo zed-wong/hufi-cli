@@ -3,21 +3,29 @@ import {
   listLauncherCampaigns,
   getLauncherCampaign,
 } from "../services/launcher/campaign.ts";
+import { listJoinedCampaigns } from "../services/recording/campaign.ts";
 import { loadConfig } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 
-function requireAuth(): { baseUrl: string; accessToken: string } {
+function requireAuth(): {
+  recordingUrl: string;
+  launcherUrl: string;
+  accessToken: string;
+  address: string;
+} {
   const config = loadConfig();
-  if (!config.accessToken) {
+  if (!config.accessToken || !config.address) {
     printText("Not authenticated. Run: hufi auth login --private-key <key>");
     process.exit(1);
   }
   return {
-    baseUrl: (config.launcherApiUrl ?? "https://cl.hu.finance").replace(
+    recordingUrl: config.recordingApiUrl.replace(/\/+$/, ""),
+    launcherUrl: (config.launcherApiUrl ?? "https://cl.hu.finance").replace(
       /\/+$/,
       ""
     ),
     accessToken: config.accessToken,
+    address: config.address,
   };
 }
 
@@ -32,30 +40,42 @@ export function createLauncherCommand(): Command {
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { recordingUrl, launcherUrl, accessToken } = requireAuth();
 
       try {
-        const result = await listLauncherCampaigns(
-          baseUrl,
-          accessToken,
-          opts.limit
+        const [launcherResult, joinedResult] = await Promise.all([
+          listLauncherCampaigns(launcherUrl, accessToken, opts.limit),
+          listJoinedCampaigns(recordingUrl, accessToken, 100).catch(
+            () => ({ results: [] })
+          ),
+        ]);
+
+        const joinedKeys = new Set(
+          (joinedResult.results ?? []).map((c) => {
+            const r = c as Record<string, unknown>;
+            return `${r.chain_id ?? ""}:${r.escrow_address ?? r.address ?? c.id}`;
+          })
         );
 
         if (opts.json) {
-          printJson(result);
+          printJson(launcherResult);
         } else {
-          const campaigns = result.results ?? [];
+          const campaigns = launcherResult.results ?? [];
           if (campaigns.length === 0) {
             printText("No campaigns found.");
           } else {
-            printText(`Campaigns (${campaigns.length}):`);
+            printText(`Available campaigns (${campaigns.length}):\n`);
             for (const c of campaigns) {
-              const parts = [
-                `  - ${c.name ?? c.id}`,
-                c.chain_id ? `chain=${c.chain_id}` : null,
-                c.status ?? null,
-              ].filter(Boolean);
-              printText(parts.join(" | "));
+              const key = `${c.chain_id ?? ""}:${c.escrow_address ?? c.id}`;
+              const joined = joinedKeys.has(key);
+              const tag = joined ? " [JOINED]" : "";
+              printText(`  ${c.name ?? c.id}${tag}`);
+              if (c.escrow_address)
+                printText(`    address: ${c.escrow_address}`);
+              printText(
+                `    chain: ${c.chain_id ?? "?"}  status: ${c.status ?? "?"}`
+              );
+              printText("");
             }
           }
         }
@@ -71,11 +91,11 @@ export function createLauncherCommand(): Command {
     .description("Get campaign details by ID")
     .option("--json", "Output as JSON")
     .action(async (campaignId: string, opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { launcherUrl, accessToken } = requireAuth();
 
       try {
         const campaign = await getLauncherCampaign(
-          baseUrl,
+          launcherUrl,
           accessToken,
           campaignId
         );
