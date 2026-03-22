@@ -3,6 +3,7 @@ import { getStakingInfo } from "../services/staking.ts";
 import { listJoinedCampaigns, getMyProgress } from "../services/recording/campaign.ts";
 import { loadConfig, getDefaultChainId } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
+import { toCsvRows } from "../lib/export.ts";
 
 function requireAuth(): { baseUrl: string; accessToken: string; address: string } {
   const config = loadConfig();
@@ -21,6 +22,7 @@ export function createDashboardCommand(): Command {
   const dashboard = new Command("dashboard")
     .description("Portfolio overview — staking, campaigns, and earnings")
     .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
+    .option("--export <format>", "Export format: csv|json")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       const { baseUrl, accessToken, address } = requireAuth();
@@ -53,13 +55,43 @@ export function createDashboardCommand(): Command {
 
         const progressResults = await Promise.all(progressPromises);
 
+        const summary = {
+          address,
+          chainId: opts.chainId,
+          staking: stakingInfo,
+          activeCampaigns: progressResults,
+        };
+
+        if (opts.export) {
+          const format = String(opts.export).toLowerCase();
+          if (format === "json") {
+            printJson(summary);
+            return;
+          }
+
+          if (format === "csv") {
+            const rows = progressResults.map(({ campaign, progress }) => {
+              const r = campaign as Record<string, unknown>;
+              const p = (progress ?? {}) as Record<string, unknown>;
+              return {
+                exchange: String(r.exchange_name ?? ""),
+                symbol: String(r.symbol ?? ""),
+                type: String(r.type ?? ""),
+                campaign_address: String(r.address ?? r.escrow_address ?? ""),
+                my_score: String(p.my_score ?? ""),
+              };
+            });
+            printText(toCsvRows(rows));
+            return;
+          }
+
+          printText("Invalid export format. Use csv or json.");
+          process.exitCode = 1;
+          return;
+        }
+
         if (opts.json) {
-          printJson({
-            address,
-            chainId: opts.chainId,
-            staking: stakingInfo,
-            activeCampaigns: progressResults,
-          });
+          printJson(summary);
           return;
         }
 

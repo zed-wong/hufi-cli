@@ -53,7 +53,7 @@ run_expect() {
   echo -e "    ${dim}\$ $CLI $*${reset}"
   if output=$("$CLI" "$@" 2>&1); then
     show_output
-    if echo "$output" | grep -qi "$expect"; then
+    if echo "$output" | grep -qi -- "$expect"; then
       echo -e "${green}  ✅ PASS — found '${expect}'${reset}"
       PASS=$((PASS + 1))
     else
@@ -62,7 +62,7 @@ run_expect() {
     fi
   else
     show_output
-    if echo "$output" | grep -qi "$expect"; then
+    if echo "$output" | grep -qi -- "$expect"; then
       echo -e "${green}  ✅ PASS — expected error: '${expect}'${reset}"
       PASS=$((PASS + 1))
     else
@@ -141,14 +141,19 @@ echo "--- Dashboard ---"
 run_expect "dashboard" "Wallet:" $TEST_FLAGS dashboard
 run_json "dashboard --json" "address" "^0x" $TEST_FLAGS dashboard --json
 run_json "dashboard --json" "staking" "{" $TEST_FLAGS dashboard --json
+run_json "dashboard --export json" "address" "^0x" $TEST_FLAGS dashboard --export json
+run_expect "dashboard rejects bad export" "Invalid export format" $TEST_FLAGS dashboard --export yaml
 
 echo "--- Help ---"
 run "--help" --help
 run "auth --help" auth --help
 run "campaign --help" campaign --help
+run_expect "campaign progress --help has watch" "--watch" campaign progress --help
+run_expect "campaign progress --help has interval" "--interval" campaign progress --help
 run "exchange --help" exchange --help
 run "staking --help" staking --help
 run "dashboard --help" dashboard --help
+run_expect "dashboard --help has export" "--export" dashboard --help
 run_expect "campaign create --help" "Create a new campaign" campaign create --help
 run_expect "campaign create needs volume target" "daily-volume-target is required" campaign create --type market_making --exchange mexc --symbol HMT/USDT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100
 run_expect "campaign create needs balance target" "daily-balance-target is required" campaign create --type holding --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100

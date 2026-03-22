@@ -2,6 +2,7 @@ import { test, expect, describe } from "bun:test";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { startMockApis } from "../fixtures/mock-server.ts";
 
 async function runCli(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   const proc = Bun.spawn(["bun", "src/cli.ts", ...args], {
@@ -77,6 +78,19 @@ describe("CLI help", () => {
     expect(code).toBe(0);
     expect(stdout).toContain("Portfolio");
   });
+
+  test("dashboard --help shows export option", async () => {
+    const { code, stdout } = await runCli(["dashboard", "--help"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("--export <format>");
+  });
+
+  test("campaign progress --help shows watch options", async () => {
+    const { code, stdout } = await runCli(["campaign", "progress", "--help"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("--watch");
+    expect(stdout).toContain("--interval <ms>");
+  });
 });
 
 describe("auth commands", () => {
@@ -122,6 +136,55 @@ describe("auth commands", () => {
       expect(stderr).toContain("Invalid configuration:");
       expect(stderr).toContain("recordingApiUrl must be a valid http/https URL");
     } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("campaign list uses mock launcher service in integration mode", async () => {
+    const mock = startMockApis();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-mock-services-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "list", "--limit", "1"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("MOCK/USDT");
+      expect(stdout).toContain("more campaigns available");
+    } finally {
+      mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("dashboard export csv prints header in integration mode", async () => {
+    const mock = startMockApis();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-mock-services-export-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+        address: "0x0000000000000000000000000000000000000001",
+        accessToken: "mock-access-token",
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli(["--config-file", configFile, "dashboard", "--export", "csv"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("exchange,symbol,type,campaign_address,my_score");
+    } finally {
+      mock.stop();
       rmSync(dir, { recursive: true, force: true });
     }
   });

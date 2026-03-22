@@ -15,6 +15,7 @@ import {
 import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
 import { getStakingInfo } from "../services/staking.ts";
 import { printJson, printText } from "../lib/output.ts";
+import { runWatchLoop } from "../lib/watch.ts";
 
 export function formatCampaignCreateProgress(confirmations: number): string {
   if (confirmations <= 0) {
@@ -300,6 +301,8 @@ export function createCampaignCommand(): Command {
     .description("Check your progress in a campaign")
     .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
     .option("-a, --address <address>", "Campaign escrow address")
+    .option("--watch", "Poll continuously")
+    .option("--interval <ms>", "Polling interval in ms", Number, 10000)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       if (!opts.address) {
@@ -309,24 +312,56 @@ export function createCampaignCommand(): Command {
       const { baseUrl, accessToken } = requireAuth();
 
       try {
-        const result = await getMyProgress(
-          baseUrl,
-          accessToken,
-          opts.chainId,
-          opts.address
-        );
+        let running = true;
+        let hasRunOnce = false;
+        let watchStoppedBySignal = false;
+        const stop = () => {
+          running = false;
+          watchStoppedBySignal = true;
+          printText("Stopped watching progress.");
+        };
 
-        if (opts.json) {
-          printJson(result);
-        } else {
-          const r = result as Record<string, unknown>;
-          if (r.message) {
-            printText(String(r.message));
+        if (opts.watch) {
+          process.once("SIGINT", stop);
+        }
+
+        await runWatchLoop(async () => {
+          hasRunOnce = true;
+          const result = await getMyProgress(
+            baseUrl,
+            accessToken,
+            opts.chainId,
+            opts.address
+          );
+
+          if (opts.json) {
+            printJson(result);
           } else {
-            for (const [key, value] of Object.entries(r)) {
-              printText(`  ${key}: ${value}`);
+            const r = result as Record<string, unknown>;
+            if (r.message) {
+              printText(String(r.message));
+            } else {
+              for (const [key, value] of Object.entries(r)) {
+                printText(`  ${key}: ${value}`);
+              }
             }
           }
+
+          if (opts.watch) {
+            printText("---");
+          }
+        }, {
+          intervalMs: opts.interval,
+          shouldContinue: () => (opts.watch ? running : !hasRunOnce),
+        });
+
+        if (opts.watch) {
+          process.removeListener("SIGINT", stop);
+          if (watchStoppedBySignal) {
+            process.exitCode = 0;
+          }
+        } else {
+          return;
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
