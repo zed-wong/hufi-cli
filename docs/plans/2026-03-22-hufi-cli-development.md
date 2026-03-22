@@ -147,7 +147,7 @@ hufi exchange revalidate --all             # recheck all keys
 |-------|----------|--------|
 | Phase 1 | Exchange delete + revalidate | Done |
 | Phase 2 | Portfolio dashboard | Done |
-| Phase 3 | Campaign create | Deferred — needs contract research |
+| Phase 3 | Campaign create | Done |
 
 ---
 
