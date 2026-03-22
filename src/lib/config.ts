@@ -29,6 +29,7 @@ function keyFile(): string {
 const DEFAULT_CONFIG: Config = {
   recordingApiUrl: "https://ro.hu.finance",
   launcherApiUrl: "https://cl.hu.finance",
+  defaultChainId: 137,
 };
 
 function ensureConfigDir() {
@@ -82,6 +83,14 @@ export function keyExists(): boolean {
 export function saveKey(key: string, address: string) {
   ensureConfigDir();
   writeFileSync(keyFile(), JSON.stringify({ address, privateKey: key }, null, 2) + "\n");
+}
+
+export function getDefaultChainId(): number {
+  return loadConfig().defaultChainId ?? 137;
+}
+
+export function getDefaultAddress(): string | undefined {
+  return loadConfig().address;
 }
 
 export function loadKey(): string | null {

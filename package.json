@@ -1,6 +1,6 @@
 {
   "name": "hufi-cli",
-  "version": "0.5.3",
+  "version": "0.5.5",
   "type": "module",
   "bin": {
     "hufi": "./dist/cli.js"

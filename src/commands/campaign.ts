@@ -11,7 +11,7 @@ import {
   listLauncherCampaigns,
   getLauncherCampaign,
 } from "../services/launcher/campaign.ts";
-import { loadConfig } from "../lib/config.ts";
+import { loadConfig, getDefaultChainId } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 
 function requireAuth(): { baseUrl: string; accessToken: string; address: string } {
@@ -40,7 +40,7 @@ export function createCampaignCommand(): Command {
   campaign
     .command("list")
     .description("List available campaigns")
-    .option("-c, --chain-id <id>", "Chain ID", Number, 137)
+    .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
     .option("-s, --status <status>", "Filter by status (active, completed, cancelled, to_cancel)", "active")
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
@@ -194,13 +194,17 @@ export function createCampaignCommand(): Command {
       }
     });
 
-  campaign
+  const statusCmd = campaign
     .command("status")
     .description("Check campaign join status")
-    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
-    .requiredOption("-a, --address <address>", "Campaign escrow address")
+    .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
+    .option("-a, --address <address>", "Campaign escrow address")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
+      if (!opts.address) {
+        statusCmd.help();
+        return;
+      }
       const { baseUrl, accessToken } = requireAuth();
 
       try {
@@ -225,13 +229,17 @@ export function createCampaignCommand(): Command {
       }
     });
 
-  campaign
+  const joinCmd = campaign
     .command("join")
     .description("Join a campaign")
-    .requiredOption("-c, --chain-id <id>", "Chain ID", Number)
-    .requiredOption("-a, --address <address>", "Campaign escrow address")
+    .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
+    .option("-a, --address <address>", "Campaign escrow address")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
+      if (!opts.address) {
+        joinCmd.help();
+        return;
+      }
       const { baseUrl, accessToken } = requireAuth();
 
       try {
@@ -271,13 +279,17 @@ export function createCampaignCommand(): Command {
       }
     });
 
-  campaign
+  const progressCmd = campaign
     .command("progress")
     .description("Check your progress in a campaign")
-    .option("-c, --chain-id <id>", "Chain ID", Number, 137)
-    .requiredOption("-a, --address <address>", "Campaign escrow address")
+    .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
+    .option("-a, --address <address>", "Campaign escrow address")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
+      if (!opts.address) {
+        progressCmd.help();
+        return;
+      }
       const { baseUrl, accessToken } = requireAuth();
 
       try {
@@ -307,11 +319,11 @@ export function createCampaignCommand(): Command {
       }
     });
 
-  campaign
+  const leaderboardCmd = campaign
     .command("leaderboard")
     .description("View campaign leaderboard")
-    .option("-c, --chain-id <id>", "Chain ID", Number, 137)
-    .requiredOption("-a, --address <address>", "Campaign escrow address")
+    .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
+    .option("-a, --address <address>", "Campaign escrow address")
     .option(
       "-r, --rank-by <field>",
       "Rank by (rewards, current_progress)",
@@ -320,6 +332,10 @@ export function createCampaignCommand(): Command {
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
+      if (!opts.address) {
+        leaderboardCmd.help();
+        return;
+      }
       try {
         const baseUrl = loadConfig().recordingApiUrl.replace(/\/+$/, "");
         const result = await getLeaderboard(
