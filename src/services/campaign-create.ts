@@ -1,4 +1,4 @@
-import { Contract, JsonRpcProvider, Wallet, parseUnits } from "ethers";
+import { Contract, JsonRpcProvider, Wallet, formatUnits, parseUnits } from "ethers";
 import { createHash } from "node:crypto";
 import type { CampaignCreateParams, CampaignCreateResult } from "../types/campaign-create.ts";
 import { estimateGasWithBuffer, waitForConfirmations } from "../lib/blockchain.ts";
@@ -10,6 +10,22 @@ import {
   ESCROW_FACTORY_ABI,
   ERC20_ABI,
 } from "../lib/contracts.ts";
+
+export interface CampaignPreflightResult {
+  needsApproval: boolean;
+  fundTokenBalance: bigint;
+  fundTokenDecimals: number;
+  fundTokenSymbol: string;
+  approveGasEstimate: bigint;
+  createGasEstimate: bigint;
+  nativeBalance: bigint;
+  gasPrice: bigint;
+}
+
+const CHAIN_NATIVE_SYMBOL: Record<number, string> = {
+  137: "MATIC",
+  1: "ETH",
+};
 
 function getProvider(chainId: number): JsonRpcProvider {
   return new JsonRpcProvider(getRpc(chainId), chainId, { staticNetwork: true, batchMaxCount: 1 });
@@ -51,6 +67,78 @@ function buildManifest(params: CampaignCreateParams): string {
 
 function hashManifest(manifest: string): string {
   return createHash("sha1").update(manifest).digest("hex");
+}
+
+export async function preflightCampaign(
+  privateKey: string,
+  chainId: number,
+  params: CampaignCreateParams
+): Promise<CampaignPreflightResult> {
+  const contracts = getContracts(chainId);
+  const provider = getProvider(chainId);
+  const wallet = new Wallet(privateKey, provider);
+
+  const tokenAddress = getFundTokenAddress(chainId, params.fundToken);
+  const fundTokenContract = new Contract(tokenAddress, ERC20_ABI, wallet);
+
+  const [decimals, balance, allowance, nativeBalance, gasPrice] = await Promise.all([
+    fundTokenContract.getFunction("decimals")() as Promise<number>,
+    fundTokenContract.getFunction("balanceOf")(wallet.address) as Promise<bigint>,
+    fundTokenContract.getFunction("allowance")(wallet.address, contracts.escrowFactory) as Promise<bigint>,
+    provider.getBalance(wallet.address),
+    provider.getFeeData().then((d) => d.gasPrice ?? 0n),
+  ]);
+
+  const fundAmountWei = parseUnits(params.fundAmount, decimals);
+  const needsApproval = allowance < fundAmountWei;
+
+  const manifest = buildManifest(params);
+  const manifestHash = hashManifest(manifest);
+  const factory = new Contract(contracts.escrowFactory, ESCROW_FACTORY_ABI, wallet);
+
+  const [approveGasEstimate, createGasEstimate] = await Promise.all([
+    needsApproval
+      ? fundTokenContract.getFunction("approve").estimateGas(contracts.escrowFactory, fundAmountWei) as Promise<bigint>
+      : Promise.resolve(0n),
+    factory.getFunction("createFundAndSetupEscrow").estimateGas(
+      tokenAddress,
+      fundAmountWei,
+      "hufi-campaign-launcher",
+      ORACLES.reputationOracle,
+      ORACLES.recordingOracle,
+      ORACLES.exchangeOracle,
+      manifest,
+      manifestHash
+    ) as Promise<bigint>,
+  ]);
+
+  return {
+    needsApproval,
+    fundTokenBalance: balance,
+    fundTokenDecimals: decimals,
+    fundTokenSymbol: params.fundToken.toUpperCase(),
+    approveGasEstimate,
+    createGasEstimate,
+    nativeBalance,
+    gasPrice,
+  };
+}
+
+export function estimateTotalGasCost(result: CampaignPreflightResult, chainId: number): {
+  totalGasWei: bigint;
+  nativeSymbol: string;
+  insufficientNative: boolean;
+} {
+  const totalGasUnits = (result.needsApproval ? result.approveGasEstimate : 0n) + result.createGasEstimate;
+  const bufferedGasUnits = estimateGasWithBuffer(totalGasUnits);
+  const totalGasWei = bufferedGasUnits * result.gasPrice;
+  const nativeSymbol = CHAIN_NATIVE_SYMBOL[chainId] ?? "ETH";
+
+  return {
+    totalGasWei,
+    nativeSymbol,
+    insufficientNative: result.nativeBalance < totalGasWei,
+  };
 }
 
 export async function createCampaign(

@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import BigNumber from "bignumber.js";
+import { formatUnits } from "ethers";
 import {
   checkJoinStatus,
   joinCampaign,
@@ -7,7 +8,7 @@ import {
   getMyProgress,
   getLeaderboard,
 } from "../services/recording/campaign.ts";
-import { createCampaign } from "../services/campaign-create.ts";
+import { createCampaign, preflightCampaign, estimateTotalGasCost } from "../services/campaign-create.ts";
 import {
   listLauncherCampaigns,
   getLauncherCampaign,
@@ -478,17 +479,6 @@ export function createCampaignCommand(): Command {
         process.exit(1);
       }
 
-      try {
-        const stakingInfo = await getStakingInfo(address, opts.chainId);
-        if (Number(stakingInfo.stakedTokens) <= 0) {
-          printText("You must stake HMT before creating a campaign.");
-          printText("Run: hufi staking stake -a <amount>");
-          process.exit(1);
-        }
-      } catch {
-        printText("Warning: could not verify staking status.");
-      }
-
       const params = {
         type: typeMap[type] as "MARKET_MAKING" | "HOLDING" | "THRESHOLD",
         exchange: opts.exchange,
@@ -503,11 +493,73 @@ export function createCampaignCommand(): Command {
         minimumBalanceTarget: opts.minimumBalanceTarget,
       };
 
+      // Check staking requirement
+      let minimumStake = "0";
       try {
-        printText(`Creating ${type} campaign on ${opts.exchange}...`);
-        printText(`  Fund: ${opts.fundAmount} ${opts.fundToken}`);
-        printText(`  Duration: ${opts.startDate} ~ ${opts.endDate}`);
-        printText("");
+        const stakingInfo = await getStakingInfo(address, opts.chainId);
+        minimumStake = stakingInfo.minimumStake;
+
+        if (Number(stakingInfo.stakedTokens) < Number(minimumStake)) {
+          printText("Insufficient staked HMT to create a campaign.");
+          printText(`  Required:  ${Number(minimumStake).toLocaleString()} HMT (minimum stake)`);
+          printText(`  Your stake: ${Number(stakingInfo.stakedTokens).toLocaleString()} HMT`);
+          printText("");
+          printText("Stake more HMT with: hufi staking stake -a <amount>");
+          process.exit(1);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Warning: could not verify staking status: ${message}`);
+        printText("Proceeding anyway...");
+      }
+
+      // Run preflight checks
+      let preflight;
+      try {
+        preflight = await preflightCampaign(privateKey, opts.chainId, params);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Preflight check failed: ${message}`);
+        process.exitCode = 1;
+        return;
+      }
+
+      // Check fund token balance
+      const fundAmountWei = BigInt(Math.floor(Number(opts.fundAmount) * (10 ** preflight.fundTokenDecimals)));
+      if (preflight.fundTokenBalance < fundAmountWei) {
+        printText(`Insufficient ${preflight.fundTokenSymbol} balance.`);
+        printText(`  Required: ${opts.fundAmount} ${preflight.fundTokenSymbol}`);
+        printText(`  Balance:  ${formatUnits(preflight.fundTokenBalance, preflight.fundTokenDecimals)} ${preflight.fundTokenSymbol}`);
+        process.exit(1);
+      }
+
+      // Estimate gas costs
+      const gasCost = estimateTotalGasCost(preflight, opts.chainId);
+
+      // Show summary before proceeding
+      printText("Campaign creation summary:");
+      printText(`  Type:       ${type} on ${opts.exchange}`);
+      printText(`  Symbol:     ${opts.symbol}`);
+      printText(`  Fund:       ${opts.fundAmount} ${preflight.fundTokenSymbol}`);
+      printText(`  Duration:   ${opts.startDate} ~ ${opts.endDate}`);
+      printText(`  Chain:      ${opts.chainId}`);
+      printText("");
+      printText("Estimated gas costs:");
+      if (preflight.needsApproval) {
+        printText(`  Approval:   ~${preflight.approveGasEstimate.toLocaleString()} gas`);
+      }
+      printText(`  Creation:   ~${preflight.createGasEstimate.toLocaleString()} gas`);
+      printText(`  Total:      ~${formatUnits(gasCost.totalGasWei, 18)} ${gasCost.nativeSymbol}`);
+      printText("");
+
+      if (gasCost.insufficientNative) {
+        printText(`Insufficient ${gasCost.nativeSymbol} for gas.`);
+        printText(`  Balance: ${formatUnits(preflight.nativeBalance, 18)} ${gasCost.nativeSymbol}`);
+        printText(`  Needed:  ~${formatUnits(gasCost.totalGasWei, 18)} ${gasCost.nativeSymbol}`);
+        process.exit(1);
+      }
+
+      try {
         printText(formatCampaignCreateProgress(0));
 
         const result = await createCampaign(
