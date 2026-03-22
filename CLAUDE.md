@@ -112,3 +112,13 @@ Every code change must bump the version number in both `package.json` and `src/c
 ## Documentation
 
 After any major change (new commands, API changes, refactors), update `README.md` to reflect the current usage. Keep command examples, options, and install instructions in sync with the actual CLI behavior.
+
+## CLI Tests
+
+When adding or modifying CLI commands, update `test-cli.sh` to include the new test case. Run `bun run test:cli` to verify all commands still pass. The test script should cover:
+- All subcommands (auth, campaign, exchange, completion)
+- Normal output mode and `--json` mode
+- Error handling (invalid inputs, missing auth)
+- Help output (`--help`)
+
+Always run `./test-cli.sh` after any command changes before committing.
