@@ -25,5 +25,7 @@ export interface LauncherCampaign {
 
 export interface LauncherCampaignList {
   has_more: boolean;
+  page?: number;
+  limit?: number;
   results: LauncherCampaign[];
 }

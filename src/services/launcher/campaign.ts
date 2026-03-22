@@ -8,9 +8,10 @@ export async function listLauncherCampaigns(
   baseUrl: string,
   chainId: number,
   limit = 20,
-  status = "active"
+  status = "active",
+  page = 1
 ): Promise<LauncherCampaignList> {
-  const url = `${baseUrl}/campaigns?chain_id=${chainId}&status=${status}&limit=${limit}`;
+  const url = `${baseUrl}/campaigns?chain_id=${chainId}&status=${status}&limit=${limit}&page=${page}`;
   return (await requestJson(url)) as LauncherCampaignList;
 }
 

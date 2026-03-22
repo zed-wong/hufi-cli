@@ -16,6 +16,13 @@ import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
 import { getStakingInfo } from "../services/staking.ts";
 import { printJson, printText } from "../lib/output.ts";
 
+export function formatCampaignCreateProgress(confirmations: number): string {
+  if (confirmations <= 0) {
+    return "Transaction submitted. Waiting for confirmations...";
+  }
+  return `Confirmations: ${confirmations}`;
+}
+
 function requireAuth(): { baseUrl: string; accessToken: string; address: string } {
   const config = loadConfig();
   if (!config.accessToken || !config.address) {
@@ -44,16 +51,20 @@ export function createCampaignCommand(): Command {
     .description("List available campaigns")
     .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
     .option("-s, --status <status>", "Filter by status (active, completed, cancelled, to_cancel)", "active")
+    .option("--page <n>", "Page number", Number, 1)
+    .option("--page-size <n>", "Items per page", Number, 20)
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       const config = loadConfig();
       try {
+        const pageSize = opts.pageSize ?? opts.limit;
         const launcherResult = await listLauncherCampaigns(
           getLauncherUrl(),
           opts.chainId,
-          opts.limit,
-          opts.status
+          pageSize,
+          opts.status,
+          opts.page
         );
 
         let joinedKeys = new Set<string>();
@@ -110,6 +121,9 @@ export function createCampaignCommand(): Command {
             }
             if (opts.status === "active") {
               printText("Tip: use --status completed, --status cancelled, or --status to_cancel to see other campaigns.");
+            }
+            if (launcherResult.has_more) {
+              printText(`Tip: more campaigns available, try --page ${opts.page + 1} --page-size ${pageSize}.`);
             }
           }
         }
@@ -471,8 +485,16 @@ export function createCampaignCommand(): Command {
         printText(`  Fund: ${opts.fundAmount} ${opts.fundToken}`);
         printText(`  Duration: ${opts.startDate} ~ ${opts.endDate}`);
         printText("");
+        printText(formatCampaignCreateProgress(0));
 
-        const result = await createCampaign(privateKey, opts.chainId, params);
+        const result = await createCampaign(
+          privateKey,
+          opts.chainId,
+          params,
+          (confirmations) => {
+            printText(formatCampaignCreateProgress(confirmations));
+          }
+        );
 
         if (opts.json) {
           printJson(result);

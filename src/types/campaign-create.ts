@@ -15,4 +15,6 @@ export interface CampaignCreateParams {
 export interface CampaignCreateResult {
   escrowAddress: string;
   txHash: string;
+  status: "submitted" | "confirmed";
+  confirmations?: number;
 }

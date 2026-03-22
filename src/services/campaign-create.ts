@@ -1,6 +1,7 @@
 import { Contract, JsonRpcProvider, Wallet, parseUnits } from "ethers";
 import { createHash } from "node:crypto";
 import type { CampaignCreateParams, CampaignCreateResult } from "../types/campaign-create.ts";
+import { estimateGasWithBuffer, waitForConfirmations } from "../lib/blockchain.ts";
 import {
   getContracts,
   getRpc,
@@ -55,7 +56,8 @@ function hashManifest(manifest: string): string {
 export async function createCampaign(
   privateKey: string,
   chainId: number,
-  params: CampaignCreateParams
+  params: CampaignCreateParams,
+  onConfirmationProgress?: (confirmations: number) => void
 ): Promise<CampaignCreateResult> {
   const contracts = getContracts(chainId);
   const provider = getProvider(chainId);
@@ -68,14 +70,30 @@ export async function createCampaign(
 
   const allowance = await hmtContract.getFunction("allowance")(wallet.address, contracts.escrowFactory) as bigint;
   if (allowance < fundAmountWei) {
-    const approveTx = await hmtContract.getFunction("approve")(contracts.escrowFactory, fundAmountWei);
-    await approveTx.wait();
+    const approveEstimate = await hmtContract.getFunction("approve").estimateGas(contracts.escrowFactory, fundAmountWei) as bigint;
+    const approveTx = await hmtContract.getFunction("approve")(
+      contracts.escrowFactory,
+      fundAmountWei,
+      { gasLimit: estimateGasWithBuffer(approveEstimate) }
+    );
+    await waitForConfirmations(provider, approveTx.hash, { minConfirmations: 1 });
   }
 
   const manifest = buildManifest(params);
   const manifestHash = hashManifest(manifest);
 
   const factory = new Contract(contracts.escrowFactory, ESCROW_FACTORY_ABI, wallet);
+
+  const createEstimate = await factory.getFunction("createFundAndSetupEscrow").estimateGas(
+    tokenAddress,
+    fundAmountWei,
+    "hufi-campaign-launcher",
+    ORACLES.reputationOracle,
+    ORACLES.recordingOracle,
+    ORACLES.exchangeOracle,
+    manifest,
+    manifestHash
+  ) as bigint;
 
   const tx = await factory.getFunction("createFundAndSetupEscrow")(
     tokenAddress,
@@ -85,10 +103,27 @@ export async function createCampaign(
     ORACLES.recordingOracle,
     ORACLES.exchangeOracle,
     manifest,
-    manifestHash
+    manifestHash,
+    { gasLimit: estimateGasWithBuffer(createEstimate) }
   );
 
-  const receipt = await tx.wait();
+  const receipt = await waitForConfirmations(provider, tx.hash, {
+    minConfirmations: 1,
+    onProgress: (confirmations) => {
+      onConfirmationProgress?.(confirmations);
+    },
+  }) as {
+    confirmations?: number | (() => Promise<number>);
+    hash: string;
+    logs: Array<{ topics: unknown; data: string }>;
+  };
+
+  let confirmations = 1;
+  if (typeof receipt.confirmations === "function") {
+    confirmations = await receipt.confirmations();
+  } else {
+    confirmations = receipt.confirmations ?? 1;
+  }
 
   const iface = factory.interface;
   let escrowAddress = "";
@@ -107,5 +142,7 @@ export async function createCampaign(
   return {
     escrowAddress: escrowAddress || "unknown",
     txHash: receipt.hash,
+    status: "confirmed",
+    confirmations,
   };
 }
