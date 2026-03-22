@@ -1,6 +1,6 @@
 import { Contract, JsonRpcProvider, Wallet, formatUnits, parseUnits } from "ethers";
 import type { StakingInfo } from "../types/staking.ts";
-import { getContracts, getRpc } from "../lib/contracts.ts";
+import { getContracts, getRpc, ERC20_ABI } from "../lib/contracts.ts";
 
 const STAKING_ABI = [
   "function getAvailableStake(address _staker) external view returns (uint256)",
@@ -10,12 +10,6 @@ const STAKING_ABI = [
   "function stake(uint256 _tokens) external",
   "function unstake(uint256 _tokens) external",
   "function withdraw() external",
-];
-
-const ERC20_ABI = [
-  "function balanceOf(address) external view returns (uint256)",
-  "function allowance(address owner, address spender) external view returns (uint256)",
-  "function approve(address spender, uint256 amount) external returns (bool)",
 ];
 
 function getProvider(chainId: number): JsonRpcProvider {

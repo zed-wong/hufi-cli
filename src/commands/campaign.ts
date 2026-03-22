@@ -7,11 +7,13 @@ import {
   getMyProgress,
   getLeaderboard,
 } from "../services/recording/campaign.ts";
+import { createCampaign } from "../services/campaign-create.ts";
 import {
   listLauncherCampaigns,
   getLauncherCampaign,
 } from "../services/launcher/campaign.ts";
-import { loadConfig, getDefaultChainId } from "../lib/config.ts";
+import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
+import { getStakingInfo } from "../services/staking.ts";
 import { printJson, printText } from "../lib/output.ts";
 
 function requireAuth(): { baseUrl: string; accessToken: string; address: string } {
@@ -362,6 +364,126 @@ export function createCampaignCommand(): Command {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to get leaderboard: ${message}`);
+        process.exitCode = 1;
+      }
+    });
+
+  const VALID_TYPES = ["market_making", "holding", "threshold"];
+
+  campaign
+    .command("create")
+    .description("Create a new campaign (launch escrow on-chain)")
+    .requiredOption("--type <type>", `Campaign type (${VALID_TYPES.join(", ")})`)
+    .requiredOption("--exchange <name>", "Exchange name (e.g. mexc, bybit)")
+    .requiredOption("--symbol <symbol>", "Token symbol or pair (e.g. HMT/USDT or HMT)")
+    .requiredOption("--start-date <date>", "Start date (YYYY-MM-DD)")
+    .requiredOption("--end-date <date>", "End date (YYYY-MM-DD)")
+    .requiredOption("--fund-token <token>", "Fund token (USDT or USDC)")
+    .requiredOption("--fund-amount <amount>", "Fund amount")
+    .option("--daily-volume-target <n>", "Daily volume target (market_making)", Number)
+    .option("--daily-balance-target <n>", "Daily balance target (holding)", Number)
+    .option("--minimum-balance-target <n>", "Minimum balance target (threshold)", Number)
+    .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
+    .option("--json", "Output as JSON")
+    .action(async (opts) => {
+      const privateKey = loadKey();
+      if (!privateKey) {
+        printText("No private key found. Run: hufi auth generate");
+        process.exit(1);
+      }
+
+      const config = loadConfig();
+      const address = config.address;
+      if (!address) {
+        printText("Not authenticated. Run: hufi auth login --private-key <key>");
+        process.exit(1);
+      }
+
+      const type = opts.type.toLowerCase();
+      if (!VALID_TYPES.includes(type)) {
+        printText(`Invalid type: ${opts.type}. Must be one of: ${VALID_TYPES.join(", ")}`);
+        process.exit(1);
+      }
+
+      const typeMap: Record<string, "MARKET_MAKING" | "HOLDING" | "THRESHOLD"> = {
+        market_making: "MARKET_MAKING",
+        holding: "HOLDING",
+        threshold: "THRESHOLD",
+      };
+
+      const startDate = new Date(opts.startDate);
+      const endDate = new Date(opts.endDate);
+      const durationHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60);
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        printText("Invalid date format. Use YYYY-MM-DD.");
+        process.exit(1);
+      }
+      if (durationHours < 6) {
+        printText("Campaign duration must be at least 6 hours.");
+        process.exit(1);
+      }
+      if (durationHours > 100 * 24) {
+        printText("Campaign duration must be at most 100 days.");
+        process.exit(1);
+      }
+
+      if (type === "market_making" && !opts.dailyVolumeTarget) {
+        printText("--daily-volume-target is required for market_making campaigns.");
+        process.exit(1);
+      }
+      if (type === "holding" && !opts.dailyBalanceTarget) {
+        printText("--daily-balance-target is required for holding campaigns.");
+        process.exit(1);
+      }
+      if (type === "threshold" && !opts.minimumBalanceTarget) {
+        printText("--minimum-balance-target is required for threshold campaigns.");
+        process.exit(1);
+      }
+
+      try {
+        const stakingInfo = await getStakingInfo(address, opts.chainId);
+        if (Number(stakingInfo.stakedTokens) <= 0) {
+          printText("You must stake HMT before creating a campaign.");
+          printText("Run: hufi staking stake -a <amount>");
+          process.exit(1);
+        }
+      } catch {
+        printText("Warning: could not verify staking status.");
+      }
+
+      const params = {
+        type: typeMap[type] as "MARKET_MAKING" | "HOLDING" | "THRESHOLD",
+        exchange: opts.exchange,
+        pair: type === "market_making" ? opts.symbol : undefined,
+        symbol: type !== "market_making" ? opts.symbol : undefined,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        fundToken: opts.fundToken.toUpperCase(),
+        fundAmount: opts.fundAmount,
+        dailyVolumeTarget: opts.dailyVolumeTarget,
+        dailyBalanceTarget: opts.dailyBalanceTarget,
+        minimumBalanceTarget: opts.minimumBalanceTarget,
+      };
+
+      try {
+        printText(`Creating ${type} campaign on ${opts.exchange}...`);
+        printText(`  Fund: ${opts.fundAmount} ${opts.fundToken}`);
+        printText(`  Duration: ${opts.startDate} ~ ${opts.endDate}`);
+        printText("");
+
+        const result = await createCampaign(privateKey, opts.chainId, params);
+
+        if (opts.json) {
+          printJson(result);
+        } else {
+          printText(`Campaign created successfully!`);
+          printText(`  Escrow: ${result.escrowAddress}`);
+          printText(`  TX:     ${result.txHash}`);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Failed to create campaign: ${message}`);
         process.exitCode = 1;
       }
     });

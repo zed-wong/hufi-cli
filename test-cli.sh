@@ -149,6 +149,7 @@ run "campaign --help" campaign --help
 run "exchange --help" exchange --help
 run "staking --help" staking --help
 run "dashboard --help" dashboard --help
+run_expect "campaign create --help" "Create a new campaign" campaign create --help
 
 rm -f "$TEST_KEY" "$TEST_CONFIG"
 

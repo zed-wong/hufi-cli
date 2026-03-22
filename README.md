@@ -56,6 +56,7 @@ hufi auth status
 | `campaign status` | Check join status |
 | `campaign progress` | Check your progress |
 | `campaign leaderboard` | View campaign leaderboard |
+| `campaign create` | Create a new campaign (launch escrow on-chain) |
 
 ```bash
 hufi campaign list                                          # list active campaigns
@@ -65,6 +66,33 @@ hufi campaign join --address 0x...                          # join (chain-id def
 hufi campaign status --address 0x...                        # check status
 hufi campaign progress --address 0x...                      # your progress
 hufi campaign leaderboard --address 0x...                   # leaderboard
+```
+
+#### Campaign Create
+
+Requires staked HMT, gas, and fund tokens (USDT/USDC). Creates an escrow contract on-chain.
+
+```bash
+# Market Making
+hufi campaign create \
+  --type market_making --exchange mexc --symbol HMT/USDT \
+  --start-date 2026-04-01 --end-date 2026-05-01 \
+  --fund-token USDT --fund-amount 10000 \
+  --daily-volume-target 50000
+
+# Holding
+hufi campaign create \
+  --type holding --exchange mexc --symbol HMT \
+  --start-date 2026-04-01 --end-date 2026-05-01 \
+  --fund-token USDT --fund-amount 5000 \
+  --daily-balance-target 1000
+
+# Threshold
+hufi campaign create \
+  --type threshold --exchange mexc --symbol HMT \
+  --start-date 2026-04-01 --end-date 2026-05-01 \
+  --fund-token USDT --fund-amount 5000 \
+  --minimum-balance-target 500
 ```
 
 Running `campaign status/join/progress/leaderboard` without `-a` shows help.
