@@ -56,7 +56,11 @@ export function createAuthCommand(): Command {
         if (!opts.json) {
           printText(`Key already exists at ${getKeyPath()}. Overwrite? (y/N)`);
           const answer = await new Promise<string>((resolve) => {
-            process.stdin.once("data", (data) => resolve(data.toString().trim().toLowerCase()));
+            process.stdin.resume();
+            process.stdin.once("data", (data) => {
+              process.stdin.pause();
+              resolve(data.toString().trim().toLowerCase());
+            });
           });
           if (answer !== "y") {
             printText("Cancelled.");
