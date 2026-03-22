@@ -143,16 +143,26 @@ hufi exchange revalidate --all             # recheck all keys
 
 ## Suggested Execution Order
 
-| Phase | Features | Estimated Scope |
-|-------|----------|-----------------|
-| Phase 1 | Exchange delete + revalidate | Small — 2 new API calls + 2 subcommands |
-| Phase 2 | Portfolio dashboard | Medium — aggregate existing data, new command |
-| Phase 3 | Campaign create | Large — contract interaction or new API, validation, multiple campaign types |
+| Phase | Features | Status |
+|-------|----------|--------|
+| Phase 1 | Exchange delete + revalidate | Done |
+| Phase 2 | Portfolio dashboard | Done |
+| Phase 3 | Campaign create | Deferred — needs contract research |
 
-**Rationale:**
-- Phase 1 is quick win — API endpoints already exist, just wire them up
-- Phase 2 builds confidence with read-only aggregation before tackling writes
-- Phase 3 is hardest — needs contract interaction or Launcher API research
+---
+
+## Phase 3: Campaign Create (Deferred)
+
+**Status:** Launcher API (`cl.hu.finance`) has NO creation endpoint — only read APIs.
+Campaign creation requires direct on-chain interaction with EscrowFactory contract.
+
+**What's needed:**
+1. EscrowFactory ABI — `createEscrow(token, admin, jobRequesterId)`
+2. HMT/USDT token approval
+3. Campaign setup transaction (details depend on campaign type)
+4. The exact flow beyond escrow creation is unclear — the web UI sends 3 transactions but the 3rd (setup) contract/function is not documented publicly
+
+**Next step:** Reverse-engineer the web UI's MetaMask transactions to understand the full on-chain flow, or coordinate with HuFi team for documentation.
 
 ---
 
