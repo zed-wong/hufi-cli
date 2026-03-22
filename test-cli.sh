@@ -150,6 +150,11 @@ run "exchange --help" exchange --help
 run "staking --help" staking --help
 run "dashboard --help" dashboard --help
 run_expect "campaign create --help" "Create a new campaign" campaign create --help
+run_expect "campaign create needs volume target" "daily-volume-target is required" campaign create --type market_making --exchange mexc --symbol HMT/USDT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100
+run_expect "campaign create needs balance target" "daily-balance-target is required" campaign create --type holding --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100
+run_expect "campaign create needs min target" "minimum-balance-target is required" campaign create --type threshold --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100
+run_expect "campaign create rejects bad type" "Invalid type" campaign create --type bad_type --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100 --daily-volume-target 1000
+run_expect "campaign create rejects short duration" "at least 6 hours" campaign create --type market_making --exchange mexc --symbol HMT/USDT --start-date 2026-04-01 --end-date 2026-04-01 --fund-token USDT --fund-amount 100 --daily-volume-target 1000
 
 rm -f "$TEST_KEY" "$TEST_CONFIG"
 
