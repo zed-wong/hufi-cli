@@ -77,4 +77,23 @@ describe("config", () => {
     const { getConfigDir } = await import("../../src/lib/config.ts");
     expect(getConfigDir()).toBe(TEST_CONFIG_DIR);
   });
+
+  test("validateConfig returns issue for invalid recordingApiUrl", async () => {
+    const { validateConfig } = await import("../../src/lib/config.ts");
+    const result = validateConfig({ recordingApiUrl: "not-a-url" } as any);
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContain("recordingApiUrl must be a valid http/https URL");
+  });
+
+  test("validateConfig accepts a valid partial config", async () => {
+    const { validateConfig } = await import("../../src/lib/config.ts");
+    const result = validateConfig({
+      recordingApiUrl: "https://ro.hu.finance",
+      launcherApiUrl: "https://cl.hu.finance",
+      defaultChainId: 137,
+      address: "0x0000000000000000000000000000000000000001",
+    });
+    expect(result.valid).toBe(true);
+    expect(result.issues.length).toBe(0);
+  });
 });

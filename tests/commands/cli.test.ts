@@ -1,4 +1,7 @@
 import { test, expect, describe } from "bun:test";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 async function runCli(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   const proc = Bun.spawn(["bun", "src/cli.ts", ...args], {
@@ -101,5 +104,25 @@ describe("auth commands", () => {
     const parsed = JSON.parse(stdout);
     expect(parsed.apiUrl).toBe("https://ro.hu.finance");
     expect(typeof parsed.authenticated).toBe("boolean");
+  });
+
+  test("cli exits with validation error for invalid config", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-invalid-config-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: "not-a-url",
+      })
+    );
+
+    try {
+      const { code, stderr } = await runCli(["--config-file", configFile, "auth", "status"]);
+      expect(code).toBe(1);
+      expect(stderr).toContain("Invalid configuration:");
+      expect(stderr).toContain("recordingApiUrl must be a valid http/https URL");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

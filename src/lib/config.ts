@@ -102,3 +102,48 @@ export function loadKey(): string | null {
     return null;
   }
 }
+
+export interface ConfigValidationResult {
+  valid: boolean;
+  issues: string[];
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isEvmAddress(value: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+export function validateConfig(config: Partial<Config>): ConfigValidationResult {
+  const issues: string[] = [];
+
+  if (config.recordingApiUrl !== undefined && !isHttpUrl(config.recordingApiUrl)) {
+    issues.push("recordingApiUrl must be a valid http/https URL");
+  }
+
+  if (config.launcherApiUrl !== undefined && !isHttpUrl(config.launcherApiUrl)) {
+    issues.push("launcherApiUrl must be a valid http/https URL");
+  }
+
+  if (config.defaultChainId !== undefined) {
+    if (!Number.isInteger(config.defaultChainId) || config.defaultChainId <= 0) {
+      issues.push("defaultChainId must be a positive integer");
+    }
+  }
+
+  if (config.address !== undefined && !isEvmAddress(config.address)) {
+    issues.push("address must be a valid 0x-prefixed EVM address");
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+  };
+}

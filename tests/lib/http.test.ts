@@ -91,6 +91,124 @@ describe("requestJson", () => {
       server.stop();
     }
   });
+
+  test("retries transient network failures with exponential backoff", async () => {
+    const { requestJson } = await import("../../src/lib/http.ts");
+
+    let attempts = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        attempts += 1;
+        if (attempts < 3) {
+          return new Response(JSON.stringify({ message: "temporary" }), {
+            status: 503,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+
+    try {
+      const result = await requestJson(`http://localhost:${server.port}/test`, {
+        retry: { initialDelayMs: 1, maxDelayMs: 2 },
+      });
+      expect(result).toEqual({ ok: true });
+      expect(attempts).toBe(3);
+    } finally {
+      server.stop();
+    }
+  });
+
+  test("does not retry on 400 errors", async () => {
+    const { requestJson } = await import("../../src/lib/http.ts");
+
+    let attempts = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        attempts += 1;
+        return new Response(JSON.stringify({ message: "bad request" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+
+    try {
+      await requestJson(`http://localhost:${server.port}/test`, {
+        retry: { retries: 5, initialDelayMs: 1, maxDelayMs: 2 },
+      });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(400);
+      expect(attempts).toBe(1);
+    } finally {
+      server.stop();
+    }
+  });
+
+  test("does not retry on auth errors", async () => {
+    const { requestJson } = await import("../../src/lib/http.ts");
+
+    let attempts = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        attempts += 1;
+        return new Response(JSON.stringify({ message: "unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+
+    try {
+      await requestJson(`http://localhost:${server.port}/test`, {
+        retry: { retries: 5, initialDelayMs: 1, maxDelayMs: 2 },
+      });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(401);
+      expect(attempts).toBe(1);
+    } finally {
+      server.stop();
+    }
+  });
+
+  test("respects explicit retry override", async () => {
+    const { requestJson } = await import("../../src/lib/http.ts");
+
+    let attempts = 0;
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        attempts += 1;
+        return new Response(JSON.stringify({ message: "temporary" }), {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+
+    try {
+      await requestJson(`http://localhost:${server.port}/test`, {
+        retry: { retries: 0, initialDelayMs: 1, maxDelayMs: 2 },
+      });
+      expect(true).toBe(false);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      expect((err as ApiError).status).toBe(503);
+      expect(attempts).toBe(1);
+    } finally {
+      server.stop();
+    }
+  });
 });
 
 describe("authHeaders", () => {
