@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { authenticate, createWallet } from "../services/recording/auth.ts";
-import { loadConfig, updateConfig } from "../lib/config.ts";
+import { loadConfig, updateConfig, saveKey, loadKey, getKeyPath } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 
 export function createAuthCommand(): Command {
@@ -9,10 +9,15 @@ export function createAuthCommand(): Command {
   auth
     .command("login")
     .description("Authenticate with Recording Oracle using a private key")
-    .requiredOption("-k, --private-key <key>", "EVM private key")
+    .option("-k, --private-key <key>", "EVM private key (uses saved key if not provided)")
     .option("-u, --api-url <url>", "Recording Oracle API URL")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
+      const privateKey = opts.privateKey ?? loadKey();
+      if (!privateKey) {
+        printText("No private key provided. Run: hufi auth login -k <key> or hufi auth generate");
+        process.exit(1);
+      }
       const config = loadConfig();
       const baseUrl = (opts.apiUrl ?? config.recordingApiUrl).replace(
         /\/+$/,
@@ -20,7 +25,7 @@ export function createAuthCommand(): Command {
       );
 
       try {
-        const result = await authenticate(baseUrl, opts.privateKey);
+        const result = await authenticate(baseUrl, privateKey);
 
         updateConfig({
           recordingApiUrl: baseUrl,
@@ -48,11 +53,13 @@ export function createAuthCommand(): Command {
     .option("--json", "Output as JSON")
     .action((opts) => {
       const wallet = createWallet();
+      saveKey(wallet.privateKey);
+      const keyPath = getKeyPath();
       if (opts.json) {
-        printJson(wallet);
+        printJson({ address: wallet.address, keyPath });
       } else {
         printText(`Address: ${wallet.address}`);
-        printText(`Private key: ${wallet.privateKey}`);
+        printText(`Private key saved to ${keyPath}`);
       }
     });
 

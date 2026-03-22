@@ -14,11 +14,11 @@ bun install
 # Show help
 bunx hufi-cli --help
 
-# Authenticate
-bunx hufi-cli auth login --private-key 0x...
-
-# Generate a new wallet
+# Generate a new wallet (key saved to ~/.hufi-cli/key.json)
 bunx hufi-cli auth generate
+
+# Authenticate (uses saved key by default)
+bunx hufi-cli auth login
 
 # Check auth status
 bunx hufi-cli auth status
