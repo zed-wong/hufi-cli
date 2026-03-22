@@ -91,11 +91,18 @@ echo "--- Exchange ---"
 run "exchange list" $TEST_FLAGS exchange list
 run "exchange list --json" $TEST_FLAGS exchange list --json
 
+echo "--- Staking ---"
+run_expect "staking status" "Staking status" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5
+run "staking status --json" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5 --json
+run "staking --help" staking --help
+run "staking stake --help" staking stake --help
+
 echo "--- Help ---"
 run "--help" --help
 run "auth --help" auth --help
 run "exchange --help" exchange --help
 run "campaign --help" campaign --help
+run "staking --help" staking --help
 
 rm -f "$TEST_KEY" "$TEST_CONFIG"
 

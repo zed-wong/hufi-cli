@@ -81,6 +81,25 @@ hufi exchange register --name mexc --api-key <key> --secret-key <secret>
 hufi exchange list
 ```
 
+### staking
+
+| Command | Description |
+|---------|-------------|
+| `staking status` | Check HMT staking status |
+| `staking stake` | Stake HMT tokens |
+| `staking unstake` | Initiate unstaking (tokens locked for lock period) |
+| `staking withdraw` | Withdraw unlocked tokens after lock period |
+
+```bash
+hufi staking status                                    # check your staking
+hufi staking status --address 0x...                    # check another address
+hufi staking stake -a 1000                             # stake 1000 HMT
+hufi staking unstake -a 500                            # unstake 500 HMT
+hufi staking withdraw                                  # withdraw unlocked tokens
+```
+
+Supports Polygon (chain 137) and Ethereum (chain 1). Staking contract: `0x01D1...07F1D` on Polygon.
+
 ## Global Options
 
 | Option | Description |
