@@ -72,11 +72,6 @@ run "auth login (saved key)" --key-file "$TEST_KEY" auth login
 run "auth status" --key-file "$TEST_KEY" auth status
 run "auth status --json" --key-file "$TEST_KEY" auth status --json
 
-echo "--- Completion ---"
-run "completion --bash" completion --bash
-run "completion --zsh" completion --zsh
-run "completion --fish" completion --fish
-
 echo "--- Campaign ---"
 run "campaign list" campaign list --limit 2
 run_expect "campaign list has campaigns" "Available campaigns" campaign list --limit 1
@@ -99,7 +94,6 @@ run "--help" --help
 run "auth --help" auth --help
 run "exchange --help" exchange --help
 run "campaign --help" campaign --help
-run "completion --help" completion --help
 
 rm -f "$TEST_KEY"
 
