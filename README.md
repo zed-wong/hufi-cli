@@ -65,6 +65,8 @@ hufi campaign get --chain-id 137 --address 0x...            # campaign details
 hufi campaign join --address 0x...                          # join (chain-id defaults to 137)
 hufi campaign status --address 0x...                        # check status
 hufi campaign progress --address 0x...                      # your progress
+hufi campaign progress --address 0x... --watch              # live updates (polling)
+hufi campaign progress --address 0x... --watch --interval 3000
 hufi campaign leaderboard --address 0x...                   # leaderboard
 ```
 
@@ -141,6 +143,8 @@ Portfolio overview — staking, active campaigns, and progress in one view.
 ```bash
 hufi dashboard              # full overview
 hufi dashboard --json       # machine output
+hufi dashboard --export csv # export active campaign rows as CSV
+hufi dashboard --export json
 ```
 
 ## Global Options

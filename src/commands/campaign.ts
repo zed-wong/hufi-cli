@@ -16,25 +16,13 @@ import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
 import { getStakingInfo } from "../services/staking.ts";
 import { printJson, printText } from "../lib/output.ts";
 import { runWatchLoop } from "../lib/watch.ts";
+import { requireAuthAddress } from "../lib/require-auth.ts";
 
 export function formatCampaignCreateProgress(confirmations: number): string {
   if (confirmations <= 0) {
     return "Transaction submitted. Waiting for confirmations...";
   }
   return `Confirmations: ${confirmations}`;
-}
-
-function requireAuth(): { baseUrl: string; accessToken: string; address: string } {
-  const config = loadConfig();
-  if (!config.accessToken || !config.address) {
-    printText("Not authenticated. Run: hufi auth login --private-key <key>");
-    process.exit(1);
-  }
-  return {
-    baseUrl: config.recordingApiUrl.replace(/\/+$/, ""),
-    accessToken: config.accessToken,
-    address: config.address,
-  };
 }
 
 function getLauncherUrl(): string {
@@ -178,7 +166,7 @@ export function createCampaignCommand(): Command {
     .option("-l, --limit <n>", "Max results", Number, 20)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
         const result = await listJoinedCampaigns(
@@ -222,7 +210,7 @@ export function createCampaignCommand(): Command {
         statusCmd.help();
         return;
       }
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
         const status = await checkJoinStatus(
@@ -257,7 +245,7 @@ export function createCampaignCommand(): Command {
         joinCmd.help();
         return;
       }
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
         const joinStatus = await checkJoinStatus(
@@ -309,7 +297,7 @@ export function createCampaignCommand(): Command {
         progressCmd.help();
         return;
       }
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
         let running = true;

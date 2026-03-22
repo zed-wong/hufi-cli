@@ -5,20 +5,8 @@ import {
   deleteExchangeApiKey,
   revalidateExchangeApiKey,
 } from "../services/recording/exchange.ts";
-import { loadConfig } from "../lib/config.ts";
 import { printJson, printText, maskSecret } from "../lib/output.ts";
-
-function requireAuth(): { baseUrl: string; accessToken: string } {
-  const config = loadConfig();
-  if (!config.accessToken) {
-    printText("Not authenticated. Run: hufi auth login --private-key <key>");
-    process.exit(1);
-  }
-  return {
-    baseUrl: config.recordingApiUrl.replace(/\/+$/, ""),
-    accessToken: config.accessToken,
-  };
-}
+import { requireAuthToken } from "../lib/require-auth.ts";
 
 export function createExchangeCommand(): Command {
   const exchange = new Command("exchange").description(
@@ -34,7 +22,7 @@ export function createExchangeCommand(): Command {
     .option("--bitmart-memo <memo>", "Bitmart memo (only for bitmart)")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthToken();
 
       try {
         const result = await registerExchangeApiKey(
@@ -68,7 +56,7 @@ export function createExchangeCommand(): Command {
     .description("List registered exchange API keys")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthToken();
 
       try {
         const keys = await listExchangeApiKeys(baseUrl, accessToken);
@@ -98,7 +86,7 @@ export function createExchangeCommand(): Command {
     .requiredOption("-n, --name <name>", "Exchange name (e.g. mexc, bybit)")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthToken();
 
       try {
         await deleteExchangeApiKey(baseUrl, accessToken, opts.name);
@@ -121,7 +109,7 @@ export function createExchangeCommand(): Command {
     .requiredOption("-n, --name <name>", "Exchange name (e.g. mexc, bybit)")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuth();
+      const { baseUrl, accessToken } = requireAuthToken();
 
       try {
         const result = await revalidateExchangeApiKey(

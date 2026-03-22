@@ -9,15 +9,3 @@ export class ApiError extends Error {
     this.payload = payload;
   }
 }
-
-export class HuFiError extends Error {
-  code: string;
-  details?: unknown;
-
-  constructor(message: string, code: string, details?: unknown) {
-    super(message);
-    this.name = "HuFiError";
-    this.code = code;
-    this.details = details;
-  }
-}

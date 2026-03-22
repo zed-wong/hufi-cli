@@ -1,22 +1,10 @@
 import { Command } from "commander";
 import { getStakingInfo } from "../services/staking.ts";
 import { listJoinedCampaigns, getMyProgress } from "../services/recording/campaign.ts";
-import { loadConfig, getDefaultChainId } from "../lib/config.ts";
+import { getDefaultChainId } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 import { toCsvRows } from "../lib/export.ts";
-
-function requireAuth(): { baseUrl: string; accessToken: string; address: string } {
-  const config = loadConfig();
-  if (!config.accessToken || !config.address) {
-    printText("Not authenticated. Run: hufi auth login --private-key <key>");
-    process.exit(1);
-  }
-  return {
-    baseUrl: config.recordingApiUrl.replace(/\/+$/, ""),
-    accessToken: config.accessToken,
-    address: config.address,
-  };
-}
+import { requireAuthAddress } from "../lib/require-auth.ts";
 
 export function createDashboardCommand(): Command {
   const dashboard = new Command("dashboard")
@@ -25,7 +13,7 @@ export function createDashboardCommand(): Command {
     .option("--export <format>", "Export format: csv|json")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken, address } = requireAuth();
+      const { baseUrl, accessToken, address } = requireAuthAddress();
 
       try {
         const [stakingInfo, campaignsResult] = await Promise.all([

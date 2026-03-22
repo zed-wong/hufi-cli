@@ -116,7 +116,7 @@ After any major change (new commands, API changes, refactors), update `README.md
 ## CLI Tests
 
 When adding or modifying CLI commands, update `test-cli.sh` to include the new test case. Run `bun run test:cli` to verify all commands still pass. The test script should cover:
-- All subcommands (auth, campaign, exchange, completion)
+- All subcommands (auth, campaign, exchange, staking, dashboard)
 - Normal output mode and `--json` mode
 - Error handling (invalid inputs, missing auth)
 - Help output (`--help`)
