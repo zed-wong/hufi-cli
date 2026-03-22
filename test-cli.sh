@@ -100,6 +100,11 @@ run "staking --help" staking --help
 run "staking stake --help" staking stake --help
 run_expect "staking deposit" "Deposit HMT" staking deposit
 
+echo "--- Dashboard ---"
+run_expect "dashboard" "Wallet:" $TEST_FLAGS dashboard
+run "dashboard --json" $TEST_FLAGS dashboard --json
+run "dashboard --help" dashboard --help
+
 echo "--- Help ---"
 run "--help" --help
 run "auth --help" auth --help

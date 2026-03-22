@@ -106,6 +106,15 @@ hufi staking withdraw                                  # withdraw unlocked token
 
 Supports Polygon (chain 137) and Ethereum (chain 1). Staking contract: `0x01D1...07F1D` on Polygon.
 
+### dashboard
+
+Portfolio overview — staking, active campaigns, and progress in one view.
+
+```bash
+hufi dashboard              # full overview
+hufi dashboard --json       # machine output
+```
+
 ## Global Options
 
 | Option | Description |

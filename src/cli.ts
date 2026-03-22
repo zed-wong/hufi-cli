@@ -5,6 +5,7 @@ import { createAuthCommand } from "./commands/auth.ts";
 import { createExchangeCommand } from "./commands/exchange.ts";
 import { createCampaignCommand } from "./commands/campaign.ts";
 import { createStakingCommand } from "./commands/staking.ts";
+import { createDashboardCommand } from "./commands/dashboard.ts";
 import { setConfigFile, setKeyFile } from "./lib/config.ts";
 
 const program = new Command();
@@ -29,5 +30,6 @@ program.addCommand(createAuthCommand());
 program.addCommand(createExchangeCommand());
 program.addCommand(createCampaignCommand());
 program.addCommand(createStakingCommand());
+program.addCommand(createDashboardCommand());
 
 program.parse();
