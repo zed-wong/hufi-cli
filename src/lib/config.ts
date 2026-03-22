@@ -56,9 +56,13 @@ export function getKeyPath() {
   return KEY_FILE;
 }
 
-export function saveKey(key: string) {
+export function keyExists(): boolean {
+  return existsSync(KEY_FILE);
+}
+
+export function saveKey(key: string, address: string) {
   ensureConfigDir();
-  writeFileSync(KEY_FILE, JSON.stringify({ privateKey: key }, null, 2) + "\n");
+  writeFileSync(KEY_FILE, JSON.stringify({ address, privateKey: key }, null, 2) + "\n");
 }
 
 export function loadKey(): string | null {

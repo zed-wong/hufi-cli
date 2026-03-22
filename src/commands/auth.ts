@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { authenticate, createWallet } from "../services/recording/auth.ts";
-import { loadConfig, updateConfig, saveKey, loadKey, getKeyPath } from "../lib/config.ts";
+import { loadConfig, updateConfig, saveKey, loadKey, getKeyPath, keyExists } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 
 export function createAuthCommand(): Command {
@@ -51,9 +51,21 @@ export function createAuthCommand(): Command {
     .command("generate")
     .description("Generate a new EVM wallet")
     .option("--json", "Output as JSON")
-    .action((opts) => {
+    .action(async (opts) => {
+      if (keyExists()) {
+        if (!opts.json) {
+          printText(`Key already exists at ${getKeyPath()}. Overwrite? (y/N)`);
+          const answer = await new Promise<string>((resolve) => {
+            process.stdin.once("data", (data) => resolve(data.toString().trim().toLowerCase()));
+          });
+          if (answer !== "y") {
+            printText("Cancelled.");
+            return;
+          }
+        }
+      }
       const wallet = createWallet();
-      saveKey(wallet.privateKey);
+      saveKey(wallet.privateKey, wallet.address);
       const keyPath = getKeyPath();
       if (opts.json) {
         printJson({ address: wallet.address, keyPath });
