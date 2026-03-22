@@ -13,7 +13,7 @@ const program = new Command();
 program
   .name("hufi")
   .description("CLI tool for hu.fi DeFi platform")
-  .version("1.0.0")
+  .version("0.1.0")
   .option("--config-file <path>", "Custom config file path (default: ~/.hufi-cli/config.json)")
   .option("--key-file <path>", "Custom key file path (default: ~/.hufi-cli/key.json)")
   .hook("preAction", (thisCommand) => {

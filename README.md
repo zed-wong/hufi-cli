@@ -70,6 +70,8 @@ hufi campaign progress --address 0x... --watch --interval 3000
 hufi campaign leaderboard --address 0x...                   # leaderboard
 ```
 
+`campaign list` and `campaign get` print exact campaign timestamps and round token balances for human-readable text output.
+
 #### Campaign Create
 
 Requires staked HMT, gas, and fund tokens (USDT/USDC). Creates an escrow contract on-chain.

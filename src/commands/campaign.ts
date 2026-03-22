@@ -19,6 +19,17 @@ import { printJson, printText } from "../lib/output.ts";
 import { runWatchLoop } from "../lib/watch.ts";
 import { requireAuthAddress } from "../lib/require-auth.ts";
 
+function formatCampaignTimestamp(value?: string): string {
+  if (!value) return "-";
+  return value.replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "");
+}
+
+function formatTokenAmount(value: string, decimals: number, displayDecimals = 2): string {
+  const amount = new BigNumber(value).dividedBy(new BigNumber(10).pow(decimals));
+  const rounded = amount.decimalPlaces(displayDecimals, BigNumber.ROUND_HALF_UP);
+  return rounded.toFormat().replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+}
+
 export function formatCampaignCreateProgress(confirmations: number): string {
   if (confirmations <= 0) {
     return "Transaction submitted. Waiting for confirmations...";
@@ -90,10 +101,6 @@ export function createCampaignCommand(): Command {
               const joined = joinedKeys.has(key);
               const tag = joined ? " [JOINED]" : "";
               const decimals = c.fund_token_decimals ?? 0;
-              const fmt = (v: string) => {
-                const bn = new BigNumber(v).dividedBy(new BigNumber(10).pow(decimals));
-                return bn.toFormat();
-              };
               const fundAmount = new BigNumber(c.fund_amount);
               const balanceNum = new BigNumber(c.balance);
               const pct = fundAmount.gt(0) ? balanceNum.dividedBy(fundAmount).times(100).toFixed(1) : "0.0";
@@ -103,9 +110,9 @@ export function createCampaignCommand(): Command {
               printText(`    chain:      ${c.chain_id}`);
               printText(`    address:    ${c.address}`);
               printText(`    status:     ${c.status}`);
-              printText(`    duration:   ${c.start_date?.split("T")[0] ?? "-"} ~ ${c.end_date?.split("T")[0] ?? "-"}`);
+              printText(`    duration:   ${formatCampaignTimestamp(c.start_date)} ~ ${formatCampaignTimestamp(c.end_date)}`);
               printText(
-                `    funded:     ${fmt(c.fund_amount)} ${c.fund_token_symbol}  paid: ${fmt(c.amount_paid)}  balance: ${fmt(c.balance)} (${pct}%)`
+                `    funded:     ${formatTokenAmount(c.fund_amount, decimals)} ${c.fund_token_symbol}  paid: ${formatTokenAmount(c.amount_paid, decimals)}  balance: ${formatTokenAmount(c.balance, decimals)} (${pct}%)`
               );
               printText("");
             }
@@ -146,12 +153,11 @@ export function createCampaignCommand(): Command {
           printText(`  chain:      ${c.chain_id}`);
           printText(`  status:     ${c.status}`);
           const showDecimals = c.fund_token_decimals ?? 0;
-          const showFmt = (v: string) => new BigNumber(v).dividedBy(new BigNumber(10).pow(showDecimals)).toFormat();
-          printText(`  funded:     ${showFmt(c.fund_amount)} ${c.fund_token_symbol}`);
-          printText(`  balance:    ${showFmt(c.balance)} ${c.fund_token_symbol}`);
-          printText(`  paid:       ${showFmt(c.amount_paid)} ${c.fund_token_symbol}`);
-          printText(`  start:      ${c.start_date}`);
-          printText(`  end:        ${c.end_date}`);
+          printText(`  funded:     ${formatTokenAmount(c.fund_amount, showDecimals)} ${c.fund_token_symbol}`);
+          printText(`  balance:    ${formatTokenAmount(c.balance, showDecimals)} ${c.fund_token_symbol}`);
+          printText(`  paid:       ${formatTokenAmount(c.amount_paid, showDecimals)} ${c.fund_token_symbol}`);
+          printText(`  start:      ${formatCampaignTimestamp(c.start_date)}`);
+          printText(`  end:        ${formatCampaignTimestamp(c.end_date)}`);
           printText(`  launcher:   ${c.launcher}`);
         }
       } catch (err: unknown) {

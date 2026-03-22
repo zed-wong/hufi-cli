@@ -158,8 +158,73 @@ describe("auth commands", () => {
       expect(code).toBe(0);
       expect(stdout).toContain("MOCK/USDT");
       expect(stdout).toContain("more campaigns available");
+      expect(stdout).toContain("duration:   2026-01-01 00:00:00 ~ 2026-01-02 00:00:00");
+      expect(stdout).toContain("funded:     1 USDT  paid: 0.1  balance: 0.9 (90.0%)");
     } finally {
       mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("campaign list trims noisy stable-token decimals in text output", async () => {
+    const launcher = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url);
+        if (req.method === "GET" && url.pathname === "/campaigns") {
+          return new Response(JSON.stringify({
+            has_more: false,
+            results: [
+              {
+                chain_id: 137,
+                address: "0xb36e0d9ce101afc891e17ff1cd400997dfed28e7",
+                type: "THRESHOLD",
+                exchange_name: "mexc",
+                symbol: "XIN",
+                status: "active",
+                fund_amount: "100000000",
+                fund_token: "USDT0",
+                fund_token_symbol: "USDT0",
+                fund_token_decimals: 6,
+                balance: "20000018",
+                amount_paid: "79999982",
+                start_date: "2026-03-18T00:00:00.000Z",
+                end_date: "2026-03-23T23:59:59.000Z",
+                launcher: "mock-launcher",
+                exchange_oracle: "0x2222222222222222222222222222222222222222",
+                recording_oracle: "0x3333333333333333333333333333333333333333",
+                reputation_oracle: "0x4444444444444444444444444444444444444444",
+              },
+            ],
+          }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-decimal-format-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: "https://ro.hu.finance",
+        launcherApiUrl: `http://localhost:${launcher.port}`,
+        defaultChainId: 137,
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "list", "--limit", "1"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("duration:   2026-03-18 00:00:00 ~ 2026-03-23 23:59:59");
+      expect(stdout).toContain("funded:     100 USDT0  paid: 80  balance: 20 (20.0%)");
+    } finally {
+      launcher.stop();
       rmSync(dir, { recursive: true, force: true });
     }
   });

@@ -122,3 +122,8 @@ When adding or modifying CLI commands, update `test-cli.sh` to include the new t
 - Help output (`--help`)
 
 Always run `./test-cli.sh` after any command changes before committing.
+
+## Campaign Output
+
+- `campaign list` and `campaign get` should print full timestamps as `YYYY-MM-DD HH:mm:ss` in text output.
+- Human-readable token amounts in campaign text output should round noisy on-chain decimals to a concise display instead of exposing raw 6-decimal stablecoin dust.

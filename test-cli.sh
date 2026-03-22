@@ -53,7 +53,7 @@ run_expect() {
   echo -e "    ${dim}\$ $CLI $*${reset}"
   if output=$("$CLI" "$@" 2>&1); then
     show_output
-    if echo "$output" | grep -qi -- "$expect"; then
+    if echo "$output" | grep -qiE -- "$expect"; then
       echo -e "${green}  ✅ PASS — found '${expect}'${reset}"
       PASS=$((PASS + 1))
     else
@@ -62,7 +62,7 @@ run_expect() {
     fi
   else
     show_output
-    if echo "$output" | grep -qi -- "$expect"; then
+    if echo "$output" | grep -qiE -- "$expect"; then
       echo -e "${green}  ✅ PASS — expected error: '${expect}'${reset}"
       PASS=$((PASS + 1))
     else
@@ -115,6 +115,7 @@ run_json "auth status --json has authenticated" "authenticated" "true" $TEST_FLA
 
 echo "--- Campaign ---"
 run_expect "campaign list" "Available campaigns" campaign list --limit 1
+run_expect "campaign list shows timestamps" "duration:   [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ~ [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}" campaign list --limit 1
 run "campaign list --json" campaign list --limit 1 --json
 run "campaign list --status completed" campaign list --status completed --limit 1
 run_expect "campaign get" "0x8ec5" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
