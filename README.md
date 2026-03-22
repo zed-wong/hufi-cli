@@ -14,6 +14,8 @@ Or run without installing:
 bunx hufi-cli <command>
 ```
 
+All examples below assume global install. Otherwise replace `hufi` with `bunx hufi-cli`.
+
 ## Quick Start
 
 ```bash
