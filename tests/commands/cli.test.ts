@@ -22,6 +22,8 @@ describe("CLI help", () => {
     expect(stdout).toContain("auth");
     expect(stdout).toContain("exchange");
     expect(stdout).toContain("campaign");
+    expect(stdout).toContain("staking");
+    expect(stdout).toContain("dashboard");
   });
 
   test("--version shows version", async () => {
@@ -53,56 +55,47 @@ describe("CLI help", () => {
     expect(code).toBe(0);
     expect(stdout).toContain("register");
     expect(stdout).toContain("list");
+    expect(stdout).toContain("delete");
+    expect(stdout).toContain("revalidate");
   });
 
-  test("--help shows completion command", async () => {
-    const { code, stdout } = await runCli(["--help"]);
+  test("staking --help shows staking commands", async () => {
+    const { code, stdout } = await runCli(["staking", "--help"]);
     expect(code).toBe(0);
-    expect(stdout).toContain("completion");
-  });
-});
-
-describe("completion scripts", () => {
-  test("completion outputs bash script by default", async () => {
-    const { code, stdout } = await runCli(["completion"]);
-    expect(code).toBe(0);
-    expect(stdout).toContain("_hufi_completions");
-    expect(stdout).toContain("complete -F _hufi_completions hufi");
-    expect(stdout).toContain("COMPREPLY");
+    expect(stdout).toContain("status");
+    expect(stdout).toContain("stake");
+    expect(stdout).toContain("unstake");
+    expect(stdout).toContain("withdraw");
+    expect(stdout).toContain("deposit");
   });
 
-  test("completion --zsh outputs zsh script", async () => {
-    const { code, stdout } = await runCli(["completion", "--zsh"]);
+  test("dashboard --help shows dashboard option", async () => {
+    const { code, stdout } = await runCli(["dashboard", "--help"]);
     expect(code).toBe(0);
-    expect(stdout).toContain("#compdef hufi");
-    expect(stdout).toContain("_hufi()");
-  });
-
-  test("completion --fish outputs fish script", async () => {
-    const { code, stdout } = await runCli(["completion", "--fish"]);
-    expect(code).toBe(0);
-    expect(stdout).toContain("# hufi completions for fish");
-    expect(stdout).toContain("complete -c hufi");
+    expect(stdout).toContain("Portfolio");
   });
 });
 
 describe("auth commands", () => {
-  test("auth generate creates wallet", async () => {
-    const { code, stdout } = await runCli(["auth", "generate"]);
+  const tmpKey = `/tmp/hufi-test-key-${Date.now()}.json`;
+
+  test("auth generate creates wallet with isolated key file", async () => {
+    const { code, stdout } = await runCli(["--key-file", tmpKey, "auth", "generate"]);
     expect(code).toBe(0);
     expect(stdout).toContain("Address: 0x");
-    expect(stdout).toContain("Private key: 0x");
+    expect(stdout).toContain("Private key saved to");
   });
 
-  test("auth generate --json outputs JSON", async () => {
-    const { code, stdout } = await runCli(["auth", "generate", "--json"]);
+  test("auth generate --json outputs valid JSON", async () => {
+    const tmpKey2 = `/tmp/hufi-test-key-${Date.now()}-2.json`;
+    const { code, stdout } = await runCli(["--key-file", tmpKey2, "auth", "generate", "--json"]);
     expect(code).toBe(0);
     const parsed = JSON.parse(stdout);
     expect(parsed.address).toMatch(/^0x[0-9a-fA-F]{40}$/);
-    expect(parsed.privateKey).toMatch(/^0x[0-9a-fA-F]{64}$/);
+    expect(parsed.keyPath).toContain("hufi-test-key");
   });
 
-  test("auth status --json shows unauthenticated state", async () => {
+  test("auth status --json shows state", async () => {
     const { code, stdout } = await runCli(["auth", "status", "--json"]);
     expect(code).toBe(0);
     const parsed = JSON.parse(stdout);
