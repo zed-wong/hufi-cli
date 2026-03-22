@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import BigNumber from "bignumber.js";
 import {
   checkJoinStatus,
   joinCampaign,
@@ -86,11 +87,13 @@ export function createCampaignCommand(): Command {
               const joined = joinedKeys.has(key);
               const tag = joined ? " [JOINED]" : "";
               const decimals = c.fund_token_decimals ?? 0;
-              const div = Math.pow(10, decimals);
-              const fmt = (v: string) => (Number(v) / div).toLocaleString(undefined, { maximumFractionDigits: decimals });
-              const fundAmount = Number(c.fund_amount);
-              const balanceNum = Number(c.balance);
-              const pct = fundAmount > 0 ? ((balanceNum / fundAmount) * 100).toFixed(1) : "0.0";
+              const fmt = (v: string) => {
+                const bn = new BigNumber(v).dividedBy(new BigNumber(10).pow(decimals));
+                return bn.toFormat();
+              };
+              const fundAmount = new BigNumber(c.fund_amount);
+              const balanceNum = new BigNumber(c.balance);
+              const pct = fundAmount.gt(0) ? balanceNum.dividedBy(fundAmount).times(100).toFixed(1) : "0.0";
               printText(
                 `  ${c.exchange_name} ${c.symbol} (${c.type})${tag}`
               );
@@ -136,9 +139,11 @@ export function createCampaignCommand(): Command {
           printText(`  address:    ${c.address}`);
           printText(`  chain:      ${c.chain_id}`);
           printText(`  status:     ${c.status}`);
-          printText(`  funded:     ${c.fund_amount} ${c.fund_token_symbol}`);
-          printText(`  balance:    ${c.balance} ${c.fund_token_symbol}`);
-          printText(`  paid:       ${c.amount_paid} ${c.fund_token_symbol}`);
+          const showDecimals = c.fund_token_decimals ?? 0;
+          const showFmt = (v: string) => new BigNumber(v).dividedBy(new BigNumber(10).pow(showDecimals)).toFormat();
+          printText(`  funded:     ${showFmt(c.fund_amount)} ${c.fund_token_symbol}`);
+          printText(`  balance:    ${showFmt(c.balance)} ${c.fund_token_symbol}`);
+          printText(`  paid:       ${showFmt(c.amount_paid)} ${c.fund_token_symbol}`);
           printText(`  start:      ${c.start_date}`);
           printText(`  end:        ${c.end_date}`);
           printText(`  launcher:   ${c.launcher}`);
