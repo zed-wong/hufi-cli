@@ -2,6 +2,8 @@ import { Command } from "commander";
 import {
   registerExchangeApiKey,
   listExchangeApiKeys,
+  deleteExchangeApiKey,
+  revalidateExchangeApiKey,
 } from "../services/recording/exchange.ts";
 import { loadConfig } from "../lib/config.ts";
 import { printJson, printText, maskSecret } from "../lib/output.ts";
@@ -86,6 +88,60 @@ export function createExchangeCommand(): Command {
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to list exchange API keys: ${message}`);
+        process.exitCode = 1;
+      }
+    });
+
+  exchange
+    .command("delete")
+    .description("Delete API keys for an exchange")
+    .requiredOption("-n, --name <name>", "Exchange name (e.g. mexc, bybit)")
+    .option("--json", "Output as JSON")
+    .action(async (opts) => {
+      const { baseUrl, accessToken } = requireAuth();
+
+      try {
+        await deleteExchangeApiKey(baseUrl, accessToken, opts.name);
+
+        if (opts.json) {
+          printJson({ deleted: true, exchange_name: opts.name });
+        } else {
+          printText(`Deleted API keys for ${opts.name}.`);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Failed to delete exchange API keys: ${message}`);
+        process.exitCode = 1;
+      }
+    });
+
+  exchange
+    .command("revalidate")
+    .description("Revalidate exchange API key")
+    .requiredOption("-n, --name <name>", "Exchange name (e.g. mexc, bybit)")
+    .option("--json", "Output as JSON")
+    .action(async (opts) => {
+      const { baseUrl, accessToken } = requireAuth();
+
+      try {
+        const result = await revalidateExchangeApiKey(
+          baseUrl,
+          accessToken,
+          opts.name
+        );
+
+        if (opts.json) {
+          printJson(result);
+        } else {
+          const status = result.is_valid ? "valid" : "invalid";
+          printText(`${opts.name}: ${status}`);
+          if (result.missing_permissions.length > 0) {
+            printText(`Missing permissions: ${result.missing_permissions.join(", ")}`);
+          }
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        printText(`Failed to revalidate exchange API key: ${message}`);
         process.exitCode = 1;
       }
     });

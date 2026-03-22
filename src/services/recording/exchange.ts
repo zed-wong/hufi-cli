@@ -3,6 +3,7 @@ import type {
   ExchangeApiKey,
   ExchangeRegistration,
   ExchangeInfo,
+  RevalidateResult,
 } from "../../types/exchange.ts";
 
 export async function registerExchangeApiKey(
@@ -43,4 +44,29 @@ export async function listExchangeApiKeys(
     method: "GET",
     headers: authHeaders(accessToken),
   })) as ExchangeInfo[];
+}
+
+export async function deleteExchangeApiKey(
+  baseUrl: string,
+  accessToken: string,
+  exchangeName: string
+): Promise<void> {
+  await requestJson(`${baseUrl}/exchange-api-keys/${exchangeName}`, {
+    method: "DELETE",
+    headers: authHeaders(accessToken),
+  });
+}
+
+export async function revalidateExchangeApiKey(
+  baseUrl: string,
+  accessToken: string,
+  exchangeName: string
+): Promise<RevalidateResult> {
+  return (await requestJson(
+    `${baseUrl}/exchange-api-keys/${exchangeName}/revalidate`,
+    {
+      method: "POST",
+      headers: authHeaders(accessToken),
+    }
+  )) as RevalidateResult;
 }

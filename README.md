@@ -75,10 +75,14 @@ Running `campaign status/join/progress/leaderboard` without `-a` shows help.
 |---------|-------------|
 | `exchange register` | Register a read-only exchange API key |
 | `exchange list` | List registered API keys |
+| `exchange delete` | Delete API keys for an exchange |
+| `exchange revalidate` | Revalidate an exchange API key |
 
 ```bash
 hufi exchange register --name mexc --api-key <key> --secret-key <secret>
 hufi exchange list
+hufi exchange revalidate --name mexc
+hufi exchange delete --name mexc
 ```
 
 ### staking

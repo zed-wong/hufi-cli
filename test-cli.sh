@@ -90,6 +90,8 @@ run "campaign leaderboard" $TEST_FLAGS campaign leaderboard --chain-id 137 --add
 echo "--- Exchange ---"
 run "exchange list" $TEST_FLAGS exchange list
 run "exchange list --json" $TEST_FLAGS exchange list --json
+run "exchange delete --help" exchange delete --help
+run "exchange revalidate --help" exchange revalidate --help
 
 echo "--- Staking ---"
 run_expect "staking status" "Staking status" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5
