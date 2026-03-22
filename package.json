@@ -1,5 +1,5 @@
 {
-  "name": "hufi-cli",
+  "name": "hufi",
   "version": "1.0.1",
   "type": "module",
   "bin": {
