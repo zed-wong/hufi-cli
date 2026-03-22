@@ -6,11 +6,26 @@ CLI="./dist/cli.js"
 PASS=0
 FAIL=0
 TOTAL=0
+KEY_FILE="$HOME/.hufi-cli/key.json"
+KEY_BACKUP="$HOME/.hufi-cli/key.json.test-backup"
 
 green='\033[0;32m'
 red='\033[0;31m'
 yellow='\033[0;33m'
 reset='\033[0m'
+
+cleanup() {
+  if [ -f "$KEY_BACKUP" ]; then
+    mv "$KEY_BACKUP" "$KEY_FILE"
+    echo -e "${yellow}Restored key.json${reset}"
+  fi
+}
+trap cleanup EXIT
+
+# Backup existing key before tests
+if [ -f "$KEY_FILE" ]; then
+  cp "$KEY_FILE" "$KEY_BACKUP"
+fi
 
 run() {
   TOTAL=$((TOTAL + 1))
