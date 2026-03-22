@@ -3,29 +3,17 @@
 set -e
 
 CLI="./dist/cli.js"
+TEST_KEY="$HOME/.hufi-cli/key.test.json"
 PASS=0
 FAIL=0
 TOTAL=0
-KEY_FILE="$HOME/.hufi-cli/key.json"
-KEY_BACKUP="$HOME/.hufi-cli/key.json.test-backup"
 
 green='\033[0;32m'
 red='\033[0;31m'
 yellow='\033[0;33m'
 reset='\033[0m'
 
-cleanup() {
-  if [ -f "$KEY_BACKUP" ]; then
-    mv "$KEY_BACKUP" "$KEY_FILE"
-    echo -e "${yellow}Restored key.json${reset}"
-  fi
-}
-trap cleanup EXIT
-
-# Backup existing key before tests
-if [ -f "$KEY_FILE" ]; then
-  cp "$KEY_FILE" "$KEY_BACKUP"
-fi
+rm -f "$TEST_KEY"
 
 run() {
   TOTAL=$((TOTAL + 1))
@@ -79,10 +67,10 @@ echo "========================================="
 echo ""
 
 echo "--- Auth ---"
-run "auth generate --json" auth generate --json
-run "auth login (saved key)" auth login
-run "auth status" auth status
-run "auth status --json" auth status --json
+run "auth generate --json" --key-file "$TEST_KEY" auth generate --json
+run "auth login (saved key)" --key-file "$TEST_KEY" auth login
+run "auth status" --key-file "$TEST_KEY" auth status
+run "auth status --json" --key-file "$TEST_KEY" auth status --json
 
 echo "--- Completion ---"
 run "completion --bash" completion --bash
@@ -96,15 +84,15 @@ run "campaign list --json" campaign list --limit 1 --json
 run "campaign list --status completed" campaign list --status completed --limit 1
 run "campaign get" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 run "campaign get --json" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
-run "campaign joined" campaign joined
-run "campaign joined --json" campaign joined --json
-run "campaign status" campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
-run "campaign status --json" campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
-run "campaign leaderboard" campaign leaderboard --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
+run "campaign joined" --key-file "$TEST_KEY" campaign joined
+run "campaign joined --json" --key-file "$TEST_KEY" campaign joined --json
+run "campaign status" --key-file "$TEST_KEY" campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
+run "campaign status --json" --key-file "$TEST_KEY" campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
+run "campaign leaderboard" --key-file "$TEST_KEY" campaign leaderboard --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 
 echo "--- Exchange ---"
-run "exchange list" exchange list
-run "exchange list --json" exchange list --json
+run "exchange list" --key-file "$TEST_KEY" exchange list
+run "exchange list --json" --key-file "$TEST_KEY" exchange list --json
 
 echo "--- Help ---"
 run "--help" --help
@@ -112,6 +100,8 @@ run "auth --help" auth --help
 run "exchange --help" exchange --help
 run "campaign --help" campaign --help
 run "completion --help" completion --help
+
+rm -f "$TEST_KEY"
 
 echo "========================================="
 echo "  Results: $PASS/$TOTAL passed, $FAIL failed"

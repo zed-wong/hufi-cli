@@ -5,7 +5,17 @@ import type { Config } from "../types/config.ts";
 
 const CONFIG_DIR = join(homedir(), ".hufi-cli");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
-const KEY_FILE = join(CONFIG_DIR, "key.json");
+const DEFAULT_KEY_FILE = join(CONFIG_DIR, "key.json");
+
+let customKeyFile: string | null = null;
+
+export function setKeyFile(path: string) {
+  customKeyFile = path;
+}
+
+function keyFile(): string {
+  return customKeyFile ?? DEFAULT_KEY_FILE;
+}
 
 const DEFAULT_CONFIG: Config = {
   recordingApiUrl: "https://ro.hu.finance",
@@ -53,22 +63,22 @@ export function getConfigPath() {
 }
 
 export function getKeyPath() {
-  return KEY_FILE;
+  return keyFile();
 }
 
 export function keyExists(): boolean {
-  return existsSync(KEY_FILE);
+  return existsSync(keyFile());
 }
 
 export function saveKey(key: string, address: string) {
   ensureConfigDir();
-  writeFileSync(KEY_FILE, JSON.stringify({ address, privateKey: key }, null, 2) + "\n");
+  writeFileSync(keyFile(), JSON.stringify({ address, privateKey: key }, null, 2) + "\n");
 }
 
 export function loadKey(): string | null {
-  if (!existsSync(KEY_FILE)) return null;
+  if (!existsSync(keyFile())) return null;
   try {
-    const raw = readFileSync(KEY_FILE, "utf-8");
+    const raw = readFileSync(keyFile(), "utf-8");
     return JSON.parse(raw).privateKey ?? null;
   } catch {
     return null;
