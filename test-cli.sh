@@ -96,6 +96,7 @@ run_expect "staking status" "Staking status" staking status --chain-id 137 --add
 run "staking status --json" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5 --json
 run "staking --help" staking --help
 run "staking stake --help" staking stake --help
+run_expect "staking deposit" "Deposit HMT" staking deposit
 
 echo "--- Help ---"
 run "--help" --help

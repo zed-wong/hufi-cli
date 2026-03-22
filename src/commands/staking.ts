@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import QRCode from "qrcode";
 import { getStakingInfo, stakeHMT, unstakeHMT, withdrawHMT } from "../services/staking.ts";
 import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
@@ -131,6 +132,32 @@ export function createStakingCommand(): Command {
         printText(`Failed to withdraw: ${message}`);
         process.exitCode = 1;
       }
+    });
+
+  const depositCmd = staking
+    .command("deposit")
+    .description("Show deposit address and QR code for receiving HMT")
+    .option("-a, --address <address>", "Wallet address (default: from config)")
+    .option("--json", "Output as JSON")
+    .action(async (opts) => {
+      const config = loadConfig();
+      const address = opts.address ?? config.address;
+      if (!address) {
+        depositCmd.help();
+        return;
+      }
+
+      if (opts.json) {
+        printJson({ address });
+        return;
+      }
+
+      const qr = await QRCode.toString(address, { type: "terminal", small: true });
+      printText("Deposit HMT to this address:\n");
+      printText(qr);
+      printText(address);
+      printText("\nSend HMT to this address on Polygon (chain 137) or Ethereum (chain 1).");
+      printText("Then run: hufi staking stake -a <amount>");
     });
 
   return staking;

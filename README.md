@@ -86,11 +86,13 @@ hufi exchange list
 | Command | Description |
 |---------|-------------|
 | `staking status` | Check HMT staking status |
+| `staking deposit` | Show deposit address and QR code |
 | `staking stake` | Stake HMT tokens |
 | `staking unstake` | Initiate unstaking (tokens locked for lock period) |
 | `staking withdraw` | Withdraw unlocked tokens after lock period |
 
 ```bash
+hufi staking deposit                                   # show address QR code
 hufi staking status                                    # check your staking
 hufi staking status --address 0x...                    # check another address
 hufi staking stake -a 1000                             # stake 1000 HMT

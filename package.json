@@ -1,6 +1,6 @@
 {
   "name": "hufi-cli",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "type": "module",
   "bin": {
     "hufi": "./dist/cli.js"
@@ -16,11 +16,13 @@
   "dependencies": {
     "bignumber.js": "^10.0.2",
     "commander": "^12.0.0",
-    "ethers": "^6.13.0"
+    "ethers": "^6.13.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/bignumber.js": "^5.0.4",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/qrcode": "^1.5.6"
   },
   "peerDependencies": {
     "typescript": "^5"
