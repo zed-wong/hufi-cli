@@ -10,7 +10,8 @@
     "build": "bun build ./src/cli.ts --outfile ./dist/cli.js --target node",
     "prepublishOnly": "bun run build",
     "test": "bun test",
-    "typecheck": "bunx tsc --noEmit"
+    "typecheck": "bunx tsc --noEmit",
+    "test:cli": "./test-cli.sh"
   },
   "dependencies": {
     "commander": "^12.0.0",
