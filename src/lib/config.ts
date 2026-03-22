@@ -4,13 +4,22 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import type { Config } from "../types/config.ts";
 
 const CONFIG_DIR = join(homedir(), ".hufi-cli");
-const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+const DEFAULT_CONFIG_FILE = join(CONFIG_DIR, "config.json");
 const DEFAULT_KEY_FILE = join(CONFIG_DIR, "key.json");
 
+let customConfigFile: string | null = null;
 let customKeyFile: string | null = null;
+
+export function setConfigFile(path: string) {
+  customConfigFile = path;
+}
 
 export function setKeyFile(path: string) {
   customKeyFile = path;
+}
+
+function configFile(): string {
+  return customConfigFile ?? DEFAULT_CONFIG_FILE;
 }
 
 function keyFile(): string {
@@ -30,11 +39,11 @@ function ensureConfigDir() {
 
 export function loadConfig(): Config {
   ensureConfigDir();
-  if (!existsSync(CONFIG_FILE)) {
+  if (!existsSync(configFile())) {
     return { ...DEFAULT_CONFIG };
   }
   try {
-    const raw = readFileSync(CONFIG_FILE, "utf-8");
+    const raw = readFileSync(configFile(), "utf-8");
     const parsed = JSON.parse(raw);
     return { ...DEFAULT_CONFIG, ...parsed };
   } catch {
@@ -44,7 +53,7 @@ export function loadConfig(): Config {
 
 export function saveConfig(config: Config) {
   ensureConfigDir();
-  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  writeFileSync(configFile(), JSON.stringify(config, null, 2) + "\n");
 }
 
 export function updateConfig(partial: Partial<Config>) {
@@ -59,7 +68,7 @@ export function getConfigDir() {
 }
 
 export function getConfigPath() {
-  return CONFIG_FILE;
+  return configFile();
 }
 
 export function getKeyPath() {

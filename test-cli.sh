@@ -4,6 +4,7 @@ set -e
 
 CLI="./dist/cli.js"
 TEST_KEY="$HOME/.hufi-cli/key.test.json"
+TEST_CONFIG="$HOME/.hufi-cli/config.test.json"
 PASS=0
 FAIL=0
 TOTAL=0
@@ -13,7 +14,7 @@ red='\033[0;31m'
 yellow='\033[0;33m'
 reset='\033[0m'
 
-rm -f "$TEST_KEY"
+rm -f "$TEST_KEY" "$TEST_CONFIG"
 
 run() {
   TOTAL=$((TOTAL + 1))
@@ -67,10 +68,11 @@ echo "========================================="
 echo ""
 
 echo "--- Auth ---"
-run "auth generate --json" --key-file "$TEST_KEY" auth generate --json
-run "auth login (saved key)" --key-file "$TEST_KEY" auth login
-run "auth status" --key-file "$TEST_KEY" auth status
-run "auth status --json" --key-file "$TEST_KEY" auth status --json
+TEST_FLAGS="--config-file $TEST_CONFIG --key-file $TEST_KEY"
+run "auth generate --json" $TEST_FLAGS auth generate --json
+run "auth login (saved key)" $TEST_FLAGS auth login
+run "auth status" $TEST_FLAGS auth status
+run "auth status --json" $TEST_FLAGS auth status --json
 
 echo "--- Campaign ---"
 run "campaign list" campaign list --limit 2
@@ -79,15 +81,15 @@ run "campaign list --json" campaign list --limit 1 --json
 run "campaign list --status completed" campaign list --status completed --limit 1
 run "campaign get" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 run "campaign get --json" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
-run "campaign joined" --key-file "$TEST_KEY" campaign joined
-run "campaign joined --json" --key-file "$TEST_KEY" campaign joined --json
-run "campaign status" --key-file "$TEST_KEY" campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
-run "campaign status --json" --key-file "$TEST_KEY" campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
-run "campaign leaderboard" --key-file "$TEST_KEY" campaign leaderboard --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
+run "campaign joined" $TEST_FLAGS campaign joined
+run "campaign joined --json" $TEST_FLAGS campaign joined --json
+run "campaign status" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
+run "campaign status --json" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
+run "campaign leaderboard" $TEST_FLAGS campaign leaderboard --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 
 echo "--- Exchange ---"
-run "exchange list" --key-file "$TEST_KEY" exchange list
-run "exchange list --json" --key-file "$TEST_KEY" exchange list --json
+run "exchange list" $TEST_FLAGS exchange list
+run "exchange list --json" $TEST_FLAGS exchange list --json
 
 echo "--- Help ---"
 run "--help" --help
@@ -95,7 +97,7 @@ run "auth --help" auth --help
 run "exchange --help" exchange --help
 run "campaign --help" campaign --help
 
-rm -f "$TEST_KEY"
+rm -f "$TEST_KEY" "$TEST_CONFIG"
 
 echo "========================================="
 echo "  Results: $PASS/$TOTAL passed, $FAIL failed"

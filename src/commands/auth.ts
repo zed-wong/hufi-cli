@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { authenticate, createWallet } from "../services/recording/auth.ts";
-import { loadConfig, updateConfig, saveKey, loadKey, getKeyPath, keyExists } from "../lib/config.ts";
+import { loadConfig, updateConfig, saveKey, loadKey, getKeyPath, keyExists, getConfigPath } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 
 export function createAuthCommand(): Command {
@@ -38,7 +38,7 @@ export function createAuthCommand(): Command {
           printJson({ address: result.address, accessToken: result.accessToken });
         } else {
           printText(`Authenticated as ${result.address}`);
-          printText(`Token saved to ~/.hufi-cli/config.json`);
+          printText(`Token saved to ${getConfigPath()}`);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
