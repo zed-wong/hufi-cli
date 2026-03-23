@@ -107,11 +107,51 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 
 ## Versioning
 
-Every code change must bump the version number in both `package.json` and `src/cli.ts`. Use `0.patch.0` format for minor fixes, `0.minor.0` for new features. Always rebuild (`bun run build`) after bumping.
+Keep the version number in sync between `package.json` and `src/cli.ts`.
+
+- Current version: `1.0.1`
+- When code changes ship, update both files together.
+- Rebuild with `bun run build` after bumping.
+- Do not change the release numbering scheme in docs unless the package metadata is updated too.
 
 ## Documentation
 
 After any major change (new commands, API changes, refactors), update `README.md` to reflect the current usage. Keep command examples, options, and install instructions in sync with the actual CLI behavior.
+
+Keep the living runtime note in `docs/execution/INTENT_ARCHITECTURE_VALIDATION_AND_ENTITIES.md` aligned with command structure, entities, and validation flow changes.
+
+## Project Structure
+
+Important paths in this repo:
+
+- `src/cli.ts` - Commander entrypoint and global option handling
+- `src/commands/` - top-level command groups: `auth`, `campaign`, `exchange`, `staking`, `dashboard`
+- `src/services/recording/` - Recording Oracle API clients
+- `src/services/launcher/` - campaign launcher API client
+- `src/services/staking.ts` - staking reads and write transactions
+- `src/services/campaign-create.ts` - on-chain campaign preflight and creation flow
+- `src/lib/` - shared helpers for config, auth guards, output, blockchain access, exports, and watch loops
+- `src/types/` - shared runtime and API shape definitions
+- `test-cli.sh` - CLI integration coverage
+- `docs/execution/INTENT_ARCHITECTURE_VALIDATION_AND_ENTITIES.md` - living technical runtime doc
+
+## Command Surface
+
+The CLI currently exposes five top-level groups:
+
+- `auth` - wallet generation, login, auth status
+- `campaign` - list/get/join/joined/status/progress/leaderboard/create
+- `exchange` - register/list/delete/revalidate exchange API keys
+- `staking` - status/deposit/stake/unstake/withdraw
+- `dashboard` - portfolio summary and export output
+
+## Config and Runtime Notes
+
+- Default config path: `~/.hufi-cli/config.json`
+- Default key path: `~/.hufi-cli/key.json`
+- Global overrides: `--config-file` and `--key-file`
+- Config validation runs before command execution in `src/cli.ts`
+- Default chain ID comes from config and falls back to `137`
 
 ## CLI Tests
 

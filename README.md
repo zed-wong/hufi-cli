@@ -5,16 +5,16 @@ CLI tool for the [hu.fi](https://hu.finance) DeFi platform.
 ## Install
 
 ```bash
-bun install -g hufi-cli
+bun install -g hufi
 ```
 
 Or run without installing:
 
 ```bash
-bunx hufi-cli <command>
+bunx hufi <command>
 ```
 
-All examples below assume global install. Otherwise replace `hufi` with `bunx hufi-cli`.
+All examples below assume global install. Otherwise replace `hufi` with `bunx hufi`.
 
 ## Quick Start
 
@@ -76,6 +76,8 @@ hufi campaign leaderboard --address 0x...                   # leaderboard
 
 Requires staked HMT, gas, and fund tokens (USDT/USDC). Creates an escrow contract on-chain.
 
+Before broadcasting, the CLI validates the campaign type-specific target, checks the 6-hour to 100-day duration window, verifies your minimum HMT stake when possible, inspects fund token balance, and estimates gas for approval plus creation.
+
 ```bash
 # Market Making
 hufi campaign create \
@@ -112,10 +114,13 @@ Running `campaign status/join/progress/leaderboard` without `-a` shows help.
 
 ```bash
 hufi exchange register --name mexc --api-key <key> --secret-key <secret>
+hufi exchange register --name bitmart --api-key <key> --secret-key <secret> --bitmart-memo <memo>
 hufi exchange list
 hufi exchange revalidate --name mexc
 hufi exchange delete --name mexc
 ```
+
+`exchange register` accepts `--bitmart-memo` for Bitmart accounts that require an extra memo value.
 
 ### staking
 
@@ -158,7 +163,7 @@ hufi dashboard --export json
 | `-V, --version` | Show version |
 | `-h, --help` | Show help |
 
-All commands support `--json` for machine-readable output.
+Most command actions support `--json` for machine-readable output. Help output remains text, and commands that intentionally show help when required arguments are missing do not emit a JSON error envelope.
 
 ## Configuration
 
@@ -181,6 +186,7 @@ bun install              # install deps
 bun run dev -- --help    # run from source
 bun run build            # build to dist/cli.js
 bun test                 # unit tests
+./test-cli.sh            # full CLI integration coverage
 bun run test:cli         # integration tests
 bun run typecheck        # type check
 ```
