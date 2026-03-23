@@ -42,6 +42,38 @@ function getLauncherUrl(): string {
   return (config.launcherApiUrl ?? "https://cl.hu.finance").replace(/\/+$/, "");
 }
 
+function printCampaignSummary(
+  campaign: Record<string, unknown>,
+  options: { indent?: string; joinedTag?: string } = {}
+): void {
+  const indent = options.indent ?? "";
+  const joinedTag = options.joinedTag ?? "";
+  const exchange = String(campaign.exchange_name ?? "?");
+  const symbol = String(campaign.symbol ?? "?");
+  const type = String(campaign.type ?? "?");
+  const chainId = String(campaign.chain_id ?? "-");
+  const address = String(campaign.address ?? campaign.escrow_address ?? "-");
+  const status = String(campaign.status ?? "-");
+  const startDate = typeof campaign.start_date === "string" ? campaign.start_date : undefined;
+  const endDate = typeof campaign.end_date === "string" ? campaign.end_date : undefined;
+  const launcher = String(campaign.launcher ?? "-");
+  const decimals = Number(campaign.fund_token_decimals ?? 0);
+  const fundAmount = new BigNumber(String(campaign.fund_amount ?? 0));
+  const balanceNum = new BigNumber(String(campaign.balance ?? 0));
+  const pct = fundAmount.gt(0) ? balanceNum.dividedBy(fundAmount).times(100).toFixed(1) : "0.0";
+  const fundTokenSymbol = String(campaign.fund_token_symbol ?? campaign.fund_token ?? "-");
+
+  printText(`${indent}${exchange} ${symbol} (${type})${joinedTag}`);
+  printText(`${indent}  chain:      ${chainId}`);
+  printText(`${indent}  address:    ${address}`);
+  printText(`${indent}  status:     ${status}`);
+  printText(`${indent}  duration:   ${formatCampaignTimestamp(startDate)} ~ ${formatCampaignTimestamp(endDate)}`);
+  printText(
+    `${indent}  funded:     ${formatTokenAmount(String(campaign.fund_amount ?? 0), decimals)} ${fundTokenSymbol}  paid: ${formatTokenAmount(String(campaign.amount_paid ?? 0), decimals)}  balance: ${formatTokenAmount(String(campaign.balance ?? 0), decimals)} (${pct}%)`
+  );
+  printText(`${indent}  launcher:   ${launcher}`);
+}
+
 export function createCampaignCommand(): Command {
   const campaign = new Command("campaign").description(
     "Campaign management commands"
@@ -100,20 +132,10 @@ export function createCampaignCommand(): Command {
               const key = `${c.chain_id}:${c.address}`;
               const joined = joinedKeys.has(key);
               const tag = joined ? " [JOINED]" : "";
-              const decimals = c.fund_token_decimals ?? 0;
-              const fundAmount = new BigNumber(c.fund_amount);
-              const balanceNum = new BigNumber(c.balance);
-              const pct = fundAmount.gt(0) ? balanceNum.dividedBy(fundAmount).times(100).toFixed(1) : "0.0";
-              printText(
-                `  ${c.exchange_name} ${c.symbol} (${c.type})${tag}`
-              );
-              printText(`    chain:      ${c.chain_id}`);
-              printText(`    address:    ${c.address}`);
-              printText(`    status:     ${c.status}`);
-              printText(`    duration:   ${formatCampaignTimestamp(c.start_date)} ~ ${formatCampaignTimestamp(c.end_date)}`);
-              printText(
-                `    funded:     ${formatTokenAmount(c.fund_amount, decimals)} ${c.fund_token_symbol}  paid: ${formatTokenAmount(c.amount_paid, decimals)}  balance: ${formatTokenAmount(c.balance, decimals)} (${pct}%)`
-              );
+              printCampaignSummary(c as unknown as Record<string, unknown>, {
+                indent: "  ",
+                joinedTag: tag,
+              });
               printText("");
             }
             if (opts.status === "active") {
@@ -189,13 +211,34 @@ export function createCampaignCommand(): Command {
           if (campaigns.length === 0) {
             printText("No joined campaigns found.");
           } else {
-            printText(`Joined campaigns (${campaigns.length}):`);
+            printText(`Joined campaigns (${campaigns.length}):\n`);
             for (const c of campaigns) {
-              const label =
-                (c as Record<string, unknown>).campaign_name ??
-                (c as Record<string, unknown>).name ??
-                c.id;
-              printText(`  - ${label}`);
+              const record = c as Record<string, unknown>;
+              const hasListMetadata = Boolean(
+                record.exchange_name ??
+                record.symbol ??
+                record.type ??
+                record.address ??
+                record.escrow_address
+              );
+
+              if (hasListMetadata) {
+                printCampaignSummary(record, { indent: "  " });
+              } else {
+                const exchange = String(record.exchange_name ?? "").trim();
+                const symbol = String(record.symbol ?? "").trim();
+                const exchangeSymbol = [exchange, symbol].filter(Boolean).join(" ");
+                const label =
+                  record.campaign_name ??
+                  record.name ??
+                  (exchangeSymbol || undefined) ??
+                  record.address ??
+                  record.escrow_address ??
+                  c.id ??
+                  "(unnamed campaign)";
+                printText(`  - ${label}`);
+              }
+              printText("");
             }
           }
         }
@@ -337,7 +380,11 @@ export function createCampaignCommand(): Command {
               printText(String(r.message));
             } else {
               for (const [key, value] of Object.entries(r)) {
-                printText(`  ${key}: ${value}`);
+                const displayValue =
+                  value !== null && typeof value === "object"
+                    ? JSON.stringify(value)
+                    : String(value);
+                printText(`  ${key}: ${displayValue}`);
               }
             }
           }

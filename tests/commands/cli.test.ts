@@ -229,6 +229,126 @@ describe("auth commands", () => {
     }
   });
 
+  test("campaign joined mirrors campaign list output when metadata is available", async () => {
+    const recording = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url);
+        if (req.method === "GET" && url.pathname === "/campaigns") {
+          return new Response(JSON.stringify({
+            results: [
+              {
+                chain_id: 137,
+                address: "0x1111111111111111111111111111111111111111",
+                exchange_name: "mexc",
+                symbol: "MOCK/USDT",
+                type: "MARKET_MAKING",
+                status: "active",
+                fund_amount: "1000000",
+                fund_token_symbol: "USDT",
+                fund_token_decimals: 6,
+                amount_paid: "100000",
+                balance: "900000",
+                start_date: "2026-01-01T00:00:00.000Z",
+                end_date: "2026-01-02T00:00:00.000Z",
+                launcher: "mock-launcher",
+              },
+            ],
+          }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-joined-output-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: `http://localhost:${recording.port}`,
+        launcherApiUrl: "https://launcher.hu.finance",
+        defaultChainId: 137,
+        address: "0x0000000000000000000000000000000000000001",
+        accessToken: "mock-access-token",
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "joined"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("Joined campaigns (1):");
+      expect(stdout).toContain("mexc MOCK/USDT (MARKET_MAKING)");
+      expect(stdout).toContain("address:    0x1111111111111111111111111111111111111111");
+      expect(stdout).toContain("status:     active");
+      expect(stdout).toContain("duration:   2026-01-01 00:00:00 ~ 2026-01-02 00:00:00");
+      expect(stdout).toContain("funded:     1 USDT  paid: 0.1  balance: 0.9 (90.0%)");
+      expect(stdout).not.toContain("undefined");
+    } finally {
+      recording.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("campaign progress renders nested meta objects in text output", async () => {
+    const recording = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url);
+        if (req.method === "GET" && url.pathname.includes("/my-progress")) {
+          return new Response(JSON.stringify({
+            from: "2026-03-22T13:50:09.001Z",
+            to: "2026-03-23T01:00:00.020Z",
+            my_score: 0,
+            my_meta: { trades: 0, volume: "0" },
+            total_meta: { trades: 12, volume: "1250.50" },
+          }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response(JSON.stringify({ message: "not found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    });
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-progress-format-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: `http://localhost:${recording.port}`,
+        launcherApiUrl: "https://launch.hu.finance",
+        defaultChainId: 137,
+        address: "0x0000000000000000000000000000000000000001",
+        accessToken: "mock-access-token",
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli([
+        "--config-file",
+        configFile,
+        "campaign",
+        "progress",
+        "--address",
+        "0xb36e0d9ce101afc891e17ff1cd400997dfed28e7",
+      ]);
+      expect(code).toBe(0);
+      expect(stdout).toContain('my_meta: {"trades":0,"volume":"0"}');
+      expect(stdout).toContain('total_meta: {"trades":12,"volume":"1250.50"}');
+      expect(stdout).not.toContain("[object Object]");
+    } finally {
+      recording.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("dashboard export csv prints header in integration mode", async () => {
     const mock = startMockApis();
     const dir = mkdtempSync(join(tmpdir(), "hufi-cli-mock-services-export-"));
