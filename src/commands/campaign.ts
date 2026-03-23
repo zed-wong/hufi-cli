@@ -24,6 +24,67 @@ function formatCampaignTimestamp(value?: string): string {
   return value.replace("T", " ").replace(/\.\d+Z$/, "").replace(/Z$/, "");
 }
 
+function formatUtcTimestamp(value: unknown): string {
+  if (typeof value !== "string") return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString().replace("T", " ").replace(/\.\d+Z$/, " UTC");
+}
+
+function formatMetricValue(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "number") {
+    return Number.isInteger(value)
+      ? String(value)
+      : value.toFixed(4).replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed && /^-?\d+(\.\d+)?$/.test(trimmed)) {
+      const num = Number(trimmed);
+      if (!Number.isNaN(num)) {
+        return formatMetricValue(num);
+      }
+    }
+    return value;
+  }
+  return JSON.stringify(value);
+}
+
+function printAlignedMetric(label: string, value: unknown, labelWidth = 14): void {
+  printText(`  ${label.padEnd(labelWidth)}  ${formatMetricValue(value)}`);
+}
+
+function printCampaignProgressCard(result: Record<string, unknown>): void {
+  const myMeta = result.my_meta && typeof result.my_meta === "object"
+    ? result.my_meta as Record<string, unknown>
+    : {};
+  const totalMeta = result.total_meta && typeof result.total_meta === "object"
+    ? result.total_meta as Record<string, unknown>
+    : {};
+
+  const myScore = Number(result.my_score ?? 0);
+  const totalScore = Number(totalMeta.total_score ?? 0);
+  const scoreShare = totalScore > 0 && Number.isFinite(myScore)
+    ? `${((myScore / totalScore) * 100).toFixed(2)}%`
+    : "-";
+
+  printText("Campaign Progress");
+  printText("-----------------");
+  printText("[Window]");
+  printAlignedMetric("From", formatUtcTimestamp(result.from));
+  printAlignedMetric("To", formatUtcTimestamp(result.to));
+  printText("");
+  printText("[Mine]");
+  printAlignedMetric("Score", result.my_score);
+  printAlignedMetric("Token balance", myMeta.token_balance);
+  printAlignedMetric("Score share", scoreShare);
+  printText("");
+  printText("[Totals]");
+  printAlignedMetric("Total score", totalMeta.total_score);
+  printAlignedMetric("Total balance", totalMeta.total_balance);
+}
+
 function formatTokenAmount(value: string, decimals: number, displayDecimals = 2): string {
   const amount = new BigNumber(value).dividedBy(new BigNumber(10).pow(decimals));
   const rounded = amount.decimalPlaces(displayDecimals, BigNumber.ROUND_HALF_UP);
@@ -44,10 +105,11 @@ function getLauncherUrl(): string {
 
 function printCampaignSummary(
   campaign: Record<string, unknown>,
-  options: { indent?: string; joinedTag?: string } = {}
+  options: { indent?: string; joinedTag?: string; showLauncher?: boolean } = {}
 ): void {
   const indent = options.indent ?? "";
   const joinedTag = options.joinedTag ?? "";
+  const showLauncher = options.showLauncher ?? true;
   const exchange = String(campaign.exchange_name ?? "?");
   const symbol = String(campaign.symbol ?? "?");
   const type = String(campaign.type ?? "?");
@@ -56,7 +118,7 @@ function printCampaignSummary(
   const status = String(campaign.status ?? "-");
   const startDate = typeof campaign.start_date === "string" ? campaign.start_date : undefined;
   const endDate = typeof campaign.end_date === "string" ? campaign.end_date : undefined;
-  const launcher = String(campaign.launcher ?? "-");
+  const launcher = typeof campaign.launcher === "string" ? campaign.launcher : undefined;
   const decimals = Number(campaign.fund_token_decimals ?? 0);
   const fundAmount = new BigNumber(String(campaign.fund_amount ?? 0));
   const balanceNum = new BigNumber(String(campaign.balance ?? 0));
@@ -71,7 +133,9 @@ function printCampaignSummary(
   printText(
     `${indent}  funded:     ${formatTokenAmount(String(campaign.fund_amount ?? 0), decimals)} ${fundTokenSymbol}  paid: ${formatTokenAmount(String(campaign.amount_paid ?? 0), decimals)}  balance: ${formatTokenAmount(String(campaign.balance ?? 0), decimals)} (${pct}%)`
   );
-  printText(`${indent}  launcher:   ${launcher}`);
+  if (showLauncher && launcher) {
+    printText(`${indent}  launcher:   ${launcher}`);
+  }
 }
 
 export function createCampaignCommand(): Command {
@@ -223,7 +287,10 @@ export function createCampaignCommand(): Command {
               );
 
               if (hasListMetadata) {
-                printCampaignSummary(record, { indent: "  " });
+                printCampaignSummary(record, {
+                  indent: "  ",
+                  showLauncher: typeof record.launcher === "string",
+                });
               } else {
                 const exchange = String(record.exchange_name ?? "").trim();
                 const symbol = String(record.symbol ?? "").trim();
@@ -378,6 +445,14 @@ export function createCampaignCommand(): Command {
             const r = result as Record<string, unknown>;
             if (r.message) {
               printText(String(r.message));
+            } else if (
+              "from" in r ||
+              "to" in r ||
+              "my_score" in r ||
+              "my_meta" in r ||
+              "total_meta" in r
+            ) {
+              printCampaignProgressCard(r);
             } else {
               for (const [key, value] of Object.entries(r)) {
                 const displayValue =
