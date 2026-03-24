@@ -5,6 +5,7 @@ set -e
 CLI="./dist/cli.js"
 TEST_KEY="$HOME/.hufi-cli/key.test.json"
 TEST_CONFIG="$HOME/.hufi-cli/config.test.json"
+BAD_AUTH_CONFIG="$HOME/.hufi-cli/config.bad-auth.test.json"
 PASS=0
 FAIL=0
 TOTAL=0
@@ -15,7 +16,7 @@ yellow='\033[0;33m'
 dim='\033[2m'
 reset='\033[0m'
 
-rm -f "$TEST_KEY" "$TEST_CONFIG"
+rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG"
 
 show_output() {
   echo "$output" | head -8 | sed 's/^/    /'
@@ -84,7 +85,7 @@ run_json() {
   if output=$("$CLI" "$@" 2>&1); then
     show_output
     local val
-    val=$(echo "$output" | node -e "const d=require('fs').readFileSync(0,'utf8');try{const j=JSON.parse(d);const v=j['$key'];console.log(typeof v==='string'?v:JSON.stringify(v))}catch{console.log('PARSE_ERROR')}")
+    val=$(echo "$output" | bun -e "const d=await Bun.stdin.text();try{const j=JSON.parse(d);const v=j['$key'];console.log(typeof v==='string'?v:JSON.stringify(v))}catch{console.log('PARSE_ERROR')}")
     if echo "$val" | grep -qiE "$expect"; then
       echo -e "${green}  ✅ PASS — .$key = '$val'${reset}"
       PASS=$((PASS + 1))
@@ -107,6 +108,15 @@ echo ""
 
 echo "--- Auth ---"
 TEST_FLAGS="--config-file $TEST_CONFIG --key-file $TEST_KEY"
+run_expect "exchange register --help mentions CCXT" "CCXT exchange name" exchange register --help
+cat > "$BAD_AUTH_CONFIG" <<EOF
+{
+  "recordingApiUrl": "https://ro.hu.finance",
+  "accessToken": "invalid-test-token"
+}
+EOF
+run_expect "exchange list with invalid token suggests auth login" "before listing exchange API keys" --config-file "$BAD_AUTH_CONFIG" exchange list
+
 run "auth generate --json" $TEST_FLAGS auth generate --json
 run_json "auth generate has address" "address" "^0x[0-9a-fA-F]{40}$" $TEST_FLAGS auth generate --json
 run "auth login (saved key)" $TEST_FLAGS auth login
@@ -129,10 +139,14 @@ run_expect "campaign leaderboard" "Leaderboard" $TEST_FLAGS campaign leaderboard
 echo "--- Exchange ---"
 run "exchange list" $TEST_FLAGS exchange list
 run "exchange list --json" $TEST_FLAGS exchange list --json
+run_expect "exchange delete --help shows positional name" "exchange delete \[name\]" exchange delete --help
+run_expect "exchange revalidate --help shows positional name" "exchange revalidate \[name\]" exchange revalidate --help
 run_expect "exchange delete --help" "Delete API keys" exchange delete --help
 run_expect "exchange revalidate --help" "Revalidate" exchange revalidate --help
 
 echo "--- Staking ---"
+run_expect "staking stake --help shows positional amount" "staking stake \[amount\]" staking stake --help
+run_expect "staking unstake --help shows positional amount" "staking unstake \[amount\]" staking unstake --help
 run_expect "staking status" "chain 137" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5
 run_json "staking status --json" "stakedTokens" "^[0-9]" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5 --json
 run_json "staking status --json" "lockPeriod" "^[0-9]" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5 --json
@@ -162,7 +176,7 @@ run_expect "campaign create needs min target" "minimum-balance-target is require
 run_expect "campaign create rejects bad type" "Invalid type" campaign create --type bad_type --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100 --daily-volume-target 1000
 run_expect "campaign create rejects short duration" "at least 6 hours" campaign create --type market_making --exchange mexc --symbol HMT/USDT --start-date 2026-04-01 --end-date 2026-04-01 --fund-token USDT --fund-amount 100 --daily-volume-target 1000
 
-rm -f "$TEST_KEY" "$TEST_CONFIG"
+rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG"
 
 echo "========================================="
 echo -e "  ${green}Results: $PASS/$TOTAL passed${reset}"

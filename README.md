@@ -116,11 +116,13 @@ Running `campaign status/join/progress/leaderboard` without `-a` shows help.
 hufi exchange register --name mexc --api-key <key> --secret-key <secret>
 hufi exchange register --name bitmart --api-key <key> --secret-key <secret> --bitmart-memo <memo>
 hufi exchange list
-hufi exchange revalidate --name mexc
-hufi exchange delete --name mexc
+hufi exchange revalidate mexc
+hufi exchange delete mexc
 ```
 
-`exchange register` accepts `--bitmart-memo` for Bitmart accounts that require an extra memo value.
+`exchange register` expects the CCXT exchange name in `--name` and accepts `--bitmart-memo` for Bitmart accounts that require an extra memo value.
+
+You must run `hufi auth login` before `exchange register`, `exchange list`, `exchange delete`, or `exchange revalidate`.
 
 ### staking
 
@@ -136,8 +138,8 @@ hufi exchange delete --name mexc
 hufi staking deposit                                   # show address QR code
 hufi staking status                                    # check your staking
 hufi staking status --address 0x...                    # check another address
-hufi staking stake -a 1000                             # stake 1000 HMT
-hufi staking unstake -a 500                            # unstake 500 HMT
+hufi staking stake 1000                                # stake 1000 HMT
+hufi staking unstake 500                               # unstake 500 HMT
 hufi staking withdraw                                  # withdraw unlocked tokens
 ```
 

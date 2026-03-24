@@ -19,5 +19,5 @@ export interface ExchangeInfo {
 
 export interface RevalidateResult {
   is_valid: boolean;
-  missing_permissions: string[];
+  missing_permissions?: string[];
 }

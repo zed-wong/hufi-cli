@@ -124,6 +124,9 @@ The CLI uses `src/lib/output.ts` to keep text and JSON output consistent.
 - auth generation and login flows
 - campaign listing, detail, progress, leaderboard, and create validation
 - exchange list and help surfaces
+- exchange auth guidance for missing or invalid login state
+- positional-first command help for exchange delete/revalidate
+- positional-first command help for staking stake/unstake
 - staking reads and deposit output
 - dashboard text, JSON, and export behavior
 - top-level and subcommand help output
@@ -132,4 +135,5 @@ The CLI uses `src/lib/output.ts` to keep text and JSON output consistent.
 
 - This document describes the current command runtime, not a separate intent engine.
 - There is no standalone domain entity layer yet; most entities are shaped directly from service responses plus `src/types/*.ts` definitions.
+- Exchange API keys are still one-per-user-per-exchange in the backend, so the CLI treats the CCXT exchange name as the single identifier for enrollment and listing.
 - If new command groups, config fields, or validation paths are added, this document should be updated in the same change.

@@ -24,10 +24,10 @@ Track manual testing progress here. Mark `[x]` when verified.
 
 | # | Command | Description | Options | Tested? |
 |---|---|---|---|---|
-| 9 | `hufi exchange register` | Register exchange API key | `-n <name>` (req), `--api-key <key>` (req), `--secret-key <key>` (req), `--bitmart-memo`, `--json` | [ ] |
-| 10 | `hufi exchange list` | List registered keys | `--json` | [x] `--json` returns `[]` after fresh login |
-| 11 | `hufi exchange delete` | Delete exchange keys | `-n <name>` (req), `--json` | [ ] |
-| 12 | `hufi exchange revalidate` | Revalidate exchange key | `-n <name>` (req), `--json` | [ ] |
+| 9 | `hufi exchange register` | Register exchange API key | `-n <name>` (req, CCXT name), `--api-key <key>` (req), `--secret-key <key>` (req), `--bitmart-memo`, `--json` | [x] help now calls out CCXT names |
+| 10 | `hufi exchange list` | List registered keys | `--json` | [x] `--json` returns `[]` after fresh login; invalid token path reminds user to run `auth login` |
+| 11 | `hufi exchange delete` | Delete exchange keys | `<name>` preferred, `-n <name>` supported, `--json` | [x] |
+| 12 | `hufi exchange revalidate` | Revalidate exchange key | `<name>` preferred, `-n <name>` supported, `--json` | [x] |
 | 13 | `hufi exchange --help` | Show exchange subcommands | | [x] lists register, list, delete, revalidate |
 
 ## `hufi campaign`
@@ -36,10 +36,10 @@ Track manual testing progress here. Mark `[x]` when verified.
 |---|---|---|---|---|
 | 14 | `hufi campaign list` | List available campaigns | `-c <chain>`, `-s <status>`, `--page <n>`, `--page-size <n>`, `-l <n>`, `--json` | [x] returns 8 campaigns with full summary, `--json` returns results array |
 | 15 | `hufi campaign get` | Get campaign details | `-c <chain>` (req), `-a <addr>` (req), `--json` | [x] |
-| 16 | `hufi campaign join` | Join a campaign | `-c <chain>`, `-a <addr>`, `--json` | [ ] |
+| 16 | `hufi campaign join` | Join a campaign | `-c <chain>`, `-a <addr>`, `--json` | [x] |
 | 17 | `hufi campaign joined` | List joined campaigns | `-l <n>`, `--json` | [x] `--json` returns empty results |
 | 18 | `hufi campaign status` | Check join status | `-c <chain>`, `-a <addr>`, `--json` | [x] returns `{ "status": "can_join" }` for test campaign |
-| 19 | `hufi campaign progress` | Check campaign progress | `-c <chain>`, `-a <addr>`, `--watch`, `--interval <ms>`, `--json` | [ ] |
+| 19 | `hufi campaign progress` | Check campaign progress | `-c <chain>`, `-a <addr>`, `--watch`, `--interval <ms>`, `--json` | [x] |
 | 20 | `hufi campaign leaderboard` | View campaign leaderboard | `-c <chain>`, `-a <addr>`, `-r <field>`, `-l <n>`, `--json` | [x] returns `{ "data": [] }` |
 | 21 | `hufi campaign create` | Create new campaign | `--type <type>` (req), `--exchange <name>` (req), `--symbol <symbol>` (req), `--start-date <date>` (req), `--end-date <date>` (req), `--fund-token <token>` (req), `--fund-amount <amount>` (req), `--daily-volume-target`, `--daily-balance-target`, `--minimum-balance-target`, `-c <chain>`, `--json` | [ ] |
 | 22 | `hufi campaign --help` | Show campaign subcommands | | [x] lists list, get, joined, status, join, progress, leaderboard, create |
