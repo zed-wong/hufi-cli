@@ -109,7 +109,7 @@ For more information, read the Bun API docs in `node_modules/bun-types/docs/**.m
 
 Keep the version number in sync between `package.json` and `src/cli.ts`.
 
-- Current version: `1.0.1`
+- Current version: `1.0.2`
 - When code changes ship, update both files together.
 - Rebuild with `bun run build` after bumping.
 - Do not change the release numbering scheme in docs unless the package metadata is updated too.

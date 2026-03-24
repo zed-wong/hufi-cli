@@ -6,7 +6,7 @@ Track manual testing progress here. Mark `[x]` when verified.
 
 | # | Command / Flag | Description | Tested? |
 |---|---|---|---|
-| 1 | `hufi --version` | Print version (should be 1.0.1) | [x] output: `1.0.1` |
+| 1 | `hufi --version` | Print version (should be 1.0.2) | [x] output: `1.0.2` |
 | 2 | `hufi --help` | Show all top-level commands | [x] lists auth, exchange, campaign, staking, dashboard |
 | 3 | `hufi --config-file <path> ...` | Use custom config path | [x] loads config from custom path, defaults when path missing |
 | 4 | `hufi --key-file <path> ...` | Use custom key path | [x] loads key from custom path, falls back to config if missing |
