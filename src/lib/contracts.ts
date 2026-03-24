@@ -1,3 +1,5 @@
+import { loadConfig } from "./config.ts";
+
 export interface ChainContracts {
   hmt: string;
   staking: string;
@@ -70,6 +72,16 @@ export function getContracts(chainId: number): ChainContracts {
 }
 
 export function getRpc(chainId: number): string {
+  const override = process.env[`HUFI_RPC_${chainId}`];
+  if (override) {
+    return override;
+  }
+
+  const configOverride = loadConfig().rpcUrls?.[String(chainId)];
+  if (configOverride) {
+    return configOverride;
+  }
+
   const rpcs = RPC_URLS[chainId];
   if (!rpcs) {
     throw new Error(`No RPC URLs for chain ${chainId}`);

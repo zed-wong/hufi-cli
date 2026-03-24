@@ -92,8 +92,25 @@ describe("config", () => {
       launcherApiUrl: "https://cl.hu.finance",
       defaultChainId: 137,
       address: "0x0000000000000000000000000000000000000001",
+      rpcUrls: {
+        "137": "http://127.0.0.1:8545",
+      },
     });
     expect(result.valid).toBe(true);
     expect(result.issues.length).toBe(0);
+  });
+
+  test("validateConfig rejects invalid rpcUrls", async () => {
+    const { validateConfig } = await import("../../src/lib/config.ts");
+    const result = validateConfig({
+      recordingApiUrl: "https://ro.hu.finance",
+      rpcUrls: {
+        polygon: "not-a-url",
+      } as unknown as Record<string, string>,
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContain("rpcUrls key 'polygon' must be a numeric chain ID");
+    expect(result.issues).toContain("rpcUrls.polygon must be a valid http/https URL");
   });
 });

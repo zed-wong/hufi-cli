@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startMockApis } from "../fixtures/mock-server.ts";
+import { startMockRpcServer } from "../fixtures/mock-rpc-server.ts";
 
 async function runCli(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
   const proc = Bun.spawn(["bun", "src/cli.ts", ...args], {
@@ -440,6 +441,71 @@ describe("auth commands", () => {
       expect(stdout).toContain("exchange,symbol,type,campaign_address,my_score");
     } finally {
       mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("staking status and dashboard remain deterministic with RPC override", async () => {
+    const mock = startMockApis();
+    const rpc = startMockRpcServer();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-staking-rpc-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+        address: "0x0000000000000000000000000000000000000001",
+        accessToken: "mock-access-token",
+      })
+    );
+
+    const runCliWithRpc = async (args: string[]) => {
+      const proc = Bun.spawn(["bun", "src/cli.ts", ...args], {
+        cwd: import.meta.dir + "/../..",
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...process.env,
+          HUFI_RPC_137: rpc.url,
+        },
+      });
+
+      const stdout = await new Response(proc.stdout).text();
+      const stderr = await new Response(proc.stderr).text();
+      await proc.exited;
+      return { code: proc.exitCode ?? 1, stdout, stderr };
+    };
+
+    try {
+      const staking = await runCliWithRpc([
+        "--config-file",
+        configFile,
+        "staking",
+        "status",
+        "--chain-id",
+        "137",
+        "--address",
+        "0x0000000000000000000000000000000000000001",
+      ]);
+      expect(staking.code).toBe(0);
+      expect(staking.stdout).toContain("Staking status (chain 137):");
+      expect(staking.stdout).toContain("Lock period:     1000 blocks");
+
+      const dashboard = await runCliWithRpc([
+        "--config-file",
+        configFile,
+        "dashboard",
+        "--json",
+      ]);
+      expect(dashboard.code).toBe(0);
+      const parsed = JSON.parse(dashboard.stdout);
+      expect(parsed.staking).not.toBeNull();
+      expect(parsed.staking.lockPeriod).toBe(1000);
+    } finally {
+      mock.stop();
+      rpc.stop();
       rmSync(dir, { recursive: true, force: true });
     }
   });

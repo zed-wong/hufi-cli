@@ -5,4 +5,5 @@ export interface Config {
   accessToken?: string;
   refreshToken?: string;
   defaultChainId?: number;
+  rpcUrls?: Record<string, string>;
 }

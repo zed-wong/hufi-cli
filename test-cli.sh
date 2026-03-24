@@ -6,6 +6,7 @@ CLI="./dist/cli.js"
 TEST_KEY="$HOME/.hufi-cli/key.test.json"
 TEST_CONFIG="$HOME/.hufi-cli/config.test.json"
 BAD_AUTH_CONFIG="$HOME/.hufi-cli/config.bad-auth.test.json"
+MOCK_RPC_INFO="$(mktemp)"
 PASS=0
 FAIL=0
 TOTAL=0
@@ -16,7 +17,46 @@ yellow='\033[0;33m'
 dim='\033[2m'
 reset='\033[0m'
 
-rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG"
+rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG" "$MOCK_RPC_INFO"
+
+bun tests/fixtures/mock-rpc-server.ts > "$MOCK_RPC_INFO" 2>/dev/null &
+MOCK_RPC_PID=$!
+
+cleanup() {
+  if [ -n "$MOCK_RPC_PID" ] && kill -0 "$MOCK_RPC_PID" 2>/dev/null; then
+    kill "$MOCK_RPC_PID" 2>/dev/null || true
+    wait "$MOCK_RPC_PID" 2>/dev/null || true
+  fi
+  rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG" "$MOCK_RPC_INFO"
+}
+
+trap cleanup EXIT
+
+for _ in $(seq 1 50); do
+  if [ -s "$MOCK_RPC_INFO" ]; then
+    break
+  fi
+  sleep 0.1
+done
+
+if [ ! -s "$MOCK_RPC_INFO" ]; then
+  echo "Failed to start mock RPC server" >&2
+  exit 1
+fi
+
+export HUFI_RPC_137
+HUFI_RPC_137=$(cat "$MOCK_RPC_INFO")
+
+cat > "$TEST_CONFIG" <<EOF
+{
+  "recordingApiUrl": "https://ro.hu.finance",
+  "launcherApiUrl": "https://cl.hu.finance",
+  "defaultChainId": 137,
+  "rpcUrls": {
+    "137": "$HUFI_RPC_137"
+  }
+}
+EOF
 
 show_output() {
   echo "$output" | head -8 | sed 's/^/    /'
@@ -175,8 +215,6 @@ run_expect "campaign create needs balance target" "daily-balance-target is requi
 run_expect "campaign create needs min target" "minimum-balance-target is required" campaign create --type threshold --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100
 run_expect "campaign create rejects bad type" "Invalid type" campaign create --type bad_type --exchange mexc --symbol HMT --start-date 2026-04-01 --end-date 2026-05-01 --fund-token USDT --fund-amount 100 --daily-volume-target 1000
 run_expect "campaign create rejects short duration" "at least 6 hours" campaign create --type market_making --exchange mexc --symbol HMT/USDT --start-date 2026-04-01 --end-date 2026-04-01 --fund-token USDT --fund-amount 100 --daily-volume-target 1000
-
-rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG"
 
 echo "========================================="
 echo -e "  ${green}Results: $PASS/$TOTAL passed${reset}"

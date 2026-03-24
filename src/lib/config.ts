@@ -142,6 +142,25 @@ export function validateConfig(config: Partial<Config>): ConfigValidationResult 
     issues.push("address must be a valid 0x-prefixed EVM address");
   }
 
+  if (config.rpcUrls !== undefined) {
+    if (
+      typeof config.rpcUrls !== "object" ||
+      config.rpcUrls === null ||
+      Array.isArray(config.rpcUrls)
+    ) {
+      issues.push("rpcUrls must be an object mapping chain IDs to RPC URLs");
+    } else {
+      for (const [chainId, url] of Object.entries(config.rpcUrls)) {
+        if (!/^\d+$/.test(chainId)) {
+          issues.push(`rpcUrls key '${chainId}' must be a numeric chain ID`);
+        }
+        if (typeof url !== "string" || !isHttpUrl(url)) {
+          issues.push(`rpcUrls.${chainId} must be a valid http/https URL`);
+        }
+      }
+    }
+  }
+
   return {
     valid: issues.length === 0,
     issues,
