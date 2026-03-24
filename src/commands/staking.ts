@@ -58,17 +58,25 @@ export function createStakingCommand(): Command {
     });
 
   staking
-    .command("stake")
+    .command("stake [amount]")
     .description("Stake HMT tokens")
-    .requiredOption("-a, --amount <amount>", "Amount of HMT to stake")
+    .usage("[amount] [options]")
+    .option("-a, --amount <amount>", "Amount of HMT to stake")
     .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
     .option("--json", "Output as JSON")
-    .action(async (opts) => {
+    .action(async (amountArg, opts) => {
+      const amount = amountArg ?? opts.amount;
+      if (!amount) {
+        printText("Amount is required. Usage: hufi staking stake <amount>");
+        process.exitCode = 1;
+        return;
+      }
+
       const privateKey = requireKey();
 
       try {
-        printText(`Staking ${opts.amount} HMT on chain ${opts.chainId}...`);
-        const hash = await stakeHMT(privateKey, opts.amount, opts.chainId);
+        printText(`Staking ${amount} HMT on chain ${opts.chainId}...`);
+        const hash = await stakeHMT(privateKey, amount, opts.chainId);
 
         if (opts.json) {
           printJson({ txHash: hash });
@@ -84,17 +92,25 @@ export function createStakingCommand(): Command {
     });
 
   staking
-    .command("unstake")
+    .command("unstake [amount]")
     .description("Initiate unstaking (tokens will be locked for the lock period)")
-    .requiredOption("-a, --amount <amount>", "Amount of HMT to unstake")
+    .usage("[amount] [options]")
+    .option("-a, --amount <amount>", "Amount of HMT to unstake")
     .option("-c, --chain-id <id>", "Chain ID (default: from config)", Number, getDefaultChainId())
     .option("--json", "Output as JSON")
-    .action(async (opts) => {
+    .action(async (amountArg, opts) => {
+      const amount = amountArg ?? opts.amount;
+      if (!amount) {
+        printText("Amount is required. Usage: hufi staking unstake <amount>");
+        process.exitCode = 1;
+        return;
+      }
+
       const privateKey = requireKey();
 
       try {
-        printText(`Unstaking ${opts.amount} HMT on chain ${opts.chainId}...`);
-        const hash = await unstakeHMT(privateKey, opts.amount, opts.chainId);
+        printText(`Unstaking ${amount} HMT on chain ${opts.chainId}...`);
+        const hash = await unstakeHMT(privateKey, amount, opts.chainId);
 
         if (opts.json) {
           printJson({ txHash: hash });
