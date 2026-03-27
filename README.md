@@ -1,20 +1,20 @@
 # hufi-cli
 
-CLI tool for the [hu.fi](https://hu.finance) DeFi platform.
+CLI tool for the [hu.fi](https://hu.finance) platform.
 
 ## Install
 
 ```bash
-bun install -g hufi
+bun install -g hufi-cli
 ```
 
 Or run without installing:
 
 ```bash
-bunx hufi <command>
+bunx hufi-cli <command>
 ```
 
-All examples below assume global install. Otherwise replace `hufi` with `bunx hufi`.
+All examples below assume global install. Otherwise replace `hufi` with `bunx hufi-cli`.
 
 ## Quick Start
 
