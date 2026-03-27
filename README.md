@@ -14,19 +14,19 @@ Or run without installing:
 bunx hufi-cli <command>
 ```
 
-All examples below assume global install. Otherwise replace `hufi` with `bunx hufi-cli`.
+All examples below assume global install. Otherwise replace `hufi-cli` with `bunx hufi-cli`.
 
 ## Quick Start
 
 ```bash
 # Generate a wallet
-hufi auth generate
+hufi-cli auth generate
 
 # Login with saved key
-hufi auth login
+hufi-cli auth login
 
 # Browse campaigns
-hufi campaign list
+hufi-cli campaign list
 ```
 
 ## Commands
@@ -40,9 +40,9 @@ hufi campaign list
 | `auth status` | Show current auth status |
 
 ```bash
-hufi auth generate --json
-hufi auth login --private-key <key>
-hufi auth status
+hufi-cli auth generate --json
+hufi-cli auth login --private-key <key>
+hufi-cli auth status
 ```
 
 ### campaign
@@ -59,15 +59,15 @@ hufi auth status
 | `campaign create` | Create a new campaign (launch escrow on-chain) |
 
 ```bash
-hufi campaign list                                          # list active campaigns
-hufi campaign list --status completed --chain-id 1          # completed on Ethereum
-hufi campaign get --chain-id 137 --address 0x...            # campaign details
-hufi campaign join --address 0x...                          # join (chain-id defaults to 137)
-hufi campaign status --address 0x...                        # check status
-hufi campaign progress --address 0x...                      # your progress
-hufi campaign progress --address 0x... --watch              # live updates (polling)
-hufi campaign progress --address 0x... --watch --interval 3000
-hufi campaign leaderboard --address 0x...                   # leaderboard
+hufi-cli campaign list                                          # list active campaigns
+hufi-cli campaign list --status completed --chain-id 1          # completed on Ethereum
+hufi-cli campaign get --chain-id 137 --address 0x...            # campaign details
+hufi-cli campaign join --address 0x...                          # join (chain-id defaults to 137)
+hufi-cli campaign status --address 0x...                        # check status
+hufi-cli campaign progress --address 0x...                      # your progress
+hufi-cli campaign progress --address 0x... --watch              # live updates (polling)
+hufi-cli campaign progress --address 0x... --watch --interval 3000
+hufi-cli campaign leaderboard --address 0x...                   # leaderboard
 ```
 
 `campaign list` and `campaign get` print exact campaign timestamps and round token balances for human-readable text output.
@@ -80,21 +80,21 @@ Before broadcasting, the CLI validates the campaign type-specific target, checks
 
 ```bash
 # Market Making
-hufi campaign create \
+hufi-cli campaign create \
   --type market_making --exchange mexc --symbol HMT/USDT \
   --start-date 2026-04-01 --end-date 2026-05-01 \
   --fund-token USDT --fund-amount 10000 \
   --daily-volume-target 50000
 
 # Holding
-hufi campaign create \
+hufi-cli campaign create \
   --type holding --exchange mexc --symbol HMT \
   --start-date 2026-04-01 --end-date 2026-05-01 \
   --fund-token USDT --fund-amount 5000 \
   --daily-balance-target 1000
 
 # Threshold
-hufi campaign create \
+hufi-cli campaign create \
   --type threshold --exchange mexc --symbol HMT \
   --start-date 2026-04-01 --end-date 2026-05-01 \
   --fund-token USDT --fund-amount 5000 \
@@ -113,16 +113,16 @@ Running `campaign status/join/progress/leaderboard` without `-a` shows help.
 | `exchange revalidate` | Revalidate an exchange API key |
 
 ```bash
-hufi exchange register --name mexc --api-key <key> --secret-key <secret>
-hufi exchange register --name bitmart --api-key <key> --secret-key <secret> --bitmart-memo <memo>
-hufi exchange list
-hufi exchange revalidate mexc
-hufi exchange delete mexc
+hufi-cli exchange register --name mexc --api-key <key> --secret-key <secret>
+hufi-cli exchange register --name bitmart --api-key <key> --secret-key <secret> --bitmart-memo <memo>
+hufi-cli exchange list
+hufi-cli exchange revalidate mexc
+hufi-cli exchange delete mexc
 ```
 
 `exchange register` expects the CCXT exchange name in `--name` and accepts `--bitmart-memo` for Bitmart accounts that require an extra memo value.
 
-You must run `hufi auth login` before `exchange register`, `exchange list`, `exchange delete`, or `exchange revalidate`.
+You must run `hufi-cli auth login` before `exchange register`, `exchange list`, `exchange delete`, or `exchange revalidate`.
 
 ### staking
 
@@ -135,12 +135,12 @@ You must run `hufi auth login` before `exchange register`, `exchange list`, `exc
 | `staking withdraw` | Withdraw unlocked tokens after lock period |
 
 ```bash
-hufi staking deposit                                   # show address QR code
-hufi staking status                                    # check your staking
-hufi staking status --address 0x...                    # check another address
-hufi staking stake 1000                                # stake 1000 HMT
-hufi staking unstake 500                               # unstake 500 HMT
-hufi staking withdraw                                  # withdraw unlocked tokens
+hufi-cli staking deposit                                   # show address QR code
+hufi-cli staking status                                    # check your staking
+hufi-cli staking status --address 0x...                    # check another address
+hufi-cli staking stake 1000                                # stake 1000 HMT
+hufi-cli staking unstake 500                               # unstake 500 HMT
+hufi-cli staking withdraw                                  # withdraw unlocked tokens
 ```
 
 Supports Polygon (chain 137) and Ethereum (chain 1). Staking contract: `0x01D1...07F1D` on Polygon.
@@ -150,10 +150,10 @@ Supports Polygon (chain 137) and Ethereum (chain 1). Staking contract: `0x01D1..
 Portfolio overview — staking, active campaigns, and progress in one view.
 
 ```bash
-hufi dashboard              # full overview
-hufi dashboard --json       # machine output
-hufi dashboard --export csv # export active campaign rows as CSV
-hufi dashboard --export json
+hufi-cli dashboard              # full overview
+hufi-cli dashboard --json       # machine output
+hufi-cli dashboard --export csv # export active campaign rows as CSV
+hufi-cli dashboard --export json
 ```
 
 ## Global Options
