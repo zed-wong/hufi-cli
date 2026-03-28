@@ -1,5 +1,7 @@
 # hufi-cli
 
+[![License: WTFPL](https://img.shields.io/badge/License-WTFPL-brightgreen.svg)](http://www.wtfpl.net/about/)
+
 CLI tool for the [hu.fi](https://hu.finance) platform.
 
 ## Install
@@ -199,3 +201,7 @@ bun run typecheck        # type check
 |---------|-----|
 | Recording Oracle | https://ro.hu.finance |
 | Campaign Launcher | https://cl.hu.finance |
+
+## License
+
+This project is released under the [DO WHAT THE F*** YOU WANT TO PUBLIC LICENSE v2](http://www.wtfpl.net/about/). Do whatever you want with it.
