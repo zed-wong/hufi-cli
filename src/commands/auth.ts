@@ -15,7 +15,7 @@ export function createAuthCommand(): Command {
     .action(async (opts) => {
       const privateKey = opts.privateKey ?? loadKey();
       if (!privateKey) {
-        printText("No private key provided. Run: hufi auth login -k <key> or hufi auth generate");
+        printText("No private key provided. Run: hufi-cli auth login -k <key> or hufi-cli auth generate");
         process.exit(1);
       }
       const config = loadConfig();
@@ -38,7 +38,8 @@ export function createAuthCommand(): Command {
           printJson({ address: result.address, accessToken: result.accessToken });
         } else {
           printText(`Authenticated as ${result.address}`);
-          printText(`Token saved to ${getConfigPath()}`);
+          printText(`Private key loaded from ${getKeyPath()}`);
+          printText(`Tokens saved to ${getConfigPath()}`);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
@@ -98,7 +99,7 @@ export function createAuthCommand(): Command {
           printText(`Authenticated as ${status.address}`);
           printText(`API: ${status.apiUrl}`);
         } else {
-          printText("Not authenticated. Run: hufi auth login --private-key <key>");
+          printText("Not authenticated. Run: hufi-cli auth login -k <key>");
         }
       }
     });
