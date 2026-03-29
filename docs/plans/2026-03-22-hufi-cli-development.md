@@ -35,7 +35,7 @@ The web UI calls the Launcher API (`cl.hu.finance`) then sends transactions via 
 ### Implementation
 
 ```
-hufi campaign create \
+hufi-cli campaign create \
   --type market_making \
   --chain-id 137 \
   --exchange mexc \
@@ -72,7 +72,7 @@ hufi campaign create \
 ### Implementation
 
 ```
-hufi dashboard
+hufi-cli dashboard
 ```
 
 Output:
@@ -122,9 +122,9 @@ Total Earned: 177 USDT
 ### Implementation
 
 ```
-hufi exchange delete --name mexc           # delete key
-hufi exchange revalidate --name mexc       # re-check validity
-hufi exchange revalidate --all             # recheck all keys
+hufi-cli exchange delete --name mexc           # delete key
+hufi-cli exchange revalidate --name mexc       # re-check validity
+hufi-cli exchange revalidate --all             # recheck all keys
 ```
 
 **Steps:**

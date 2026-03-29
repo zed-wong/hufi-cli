@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-22
 **Branch:** master
-**Target:** `hufi campaign create`
+**Target:** `hufi-cli campaign create`
 
 ## Source Analysis
 
@@ -30,7 +30,7 @@ Before calling: need `ERC20.approve(EscrowFactory, amount)`.
 ## Command Design
 
 ```bash
-hufi campaign create \
+hufi-cli campaign create \
   --type market_making \
   --exchange mexc \
   --symbol HMT/USDT \
