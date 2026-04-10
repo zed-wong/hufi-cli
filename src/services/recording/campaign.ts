@@ -66,8 +66,26 @@ export async function getLeaderboard(
   campaignAddress: string,
   rankBy: string,
   limit = 20
-): Promise<{ data: { address: string; result: number }[] }> {
+): Promise<{
+  data: {
+    address: string;
+    score?: number | string | null;
+    result?: number | string | null;
+    estimated_reward?: number | string | null;
+  }[];
+  total?: number | string | null;
+  updated_at?: string | null;
+}> {
   return (await requestJson(
     `${baseUrl}/campaigns/${chainId}-${campaignAddress}/leaderboard?rankBy=${rankBy}&limit=${limit}`
-  )) as { data: { address: string; result: number }[] };
+  )) as {
+    data: {
+      address: string;
+      score?: number | string | null;
+      result?: number | string | null;
+      estimated_reward?: number | string | null;
+    }[];
+    total?: number | string | null;
+    updated_at?: string | null;
+  };
 }
