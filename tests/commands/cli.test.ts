@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startMockApis } from "../fixtures/mock-server.ts";
@@ -19,11 +19,15 @@ async function runCli(args: string[]): Promise<{ code: number; stdout: string; s
   return { code: proc.exitCode ?? 1, stdout, stderr };
 }
 
+function uniquePath(prefix: string, suffix = ".json"): string {
+  return join(tmpdir(), `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}${suffix}`);
+}
+
 describe("CLI help", () => {
   test("--help shows usage", async () => {
     const { code, stdout } = await runCli(["--help"]);
     expect(code).toBe(0);
-    expect(stdout).toContain("CLI tool for hu.fi DeFi platform");
+    expect(stdout).toContain("CLI tool for Hu.fi platform");
     expect(stdout).toContain("auth");
     expect(stdout).toContain("exchange");
     expect(stdout).toContain("campaign");
@@ -37,10 +41,37 @@ describe("CLI help", () => {
     expect(stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
+  test("-p without value prints profiles and local keys", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-profile-short-list-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: "https://ro.hu.finance",
+        profiles: {
+          alpha: {},
+          beta: {},
+        },
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli(["--config-file", configFile, "-p"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("Profiles");
+      expect(stdout).toContain("Local keys");
+      expect(stdout).toContain("alpha");
+      expect(stdout).toContain("beta");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("auth --help shows auth commands", async () => {
     const { code, stdout } = await runCli(["auth", "--help"]);
     expect(code).toBe(0);
     expect(stdout).toContain("login");
+    expect(stdout).toContain("list");
     expect(stdout).toContain("generate");
     expect(stdout).toContain("status");
   });
@@ -95,22 +126,33 @@ describe("CLI help", () => {
 });
 
 describe("auth commands", () => {
-  const tmpKey = `/tmp/hufi-test-key-${Date.now()}.json`;
-
   test("auth generate creates wallet with isolated key file", async () => {
-    const { code, stdout } = await runCli(["--key-file", tmpKey, "auth", "generate"]);
+    const tmpKey = uniquePath("hufi-test-key");
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-key-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(configFile, JSON.stringify({
+      recordingApiUrl: "https://ro.hu.finance",
+      launcherApiUrl: "https://cl.hu.finance",
+      defaultChainId: 137,
+      profiles: {
+        default: {
+          keyFile: tmpKey,
+        },
+      },
+    }));
+    const { code, stdout } = await runCli(["--config-file", configFile, "--key-file", tmpKey, "auth", "generate"]);
     expect(code).toBe(0);
     expect(stdout).toContain("Address: 0x");
     expect(stdout).toContain("Private key saved to");
   });
 
   test("auth generate --json outputs valid JSON", async () => {
-    const tmpKey2 = `/tmp/hufi-test-key-${Date.now()}-2.json`;
+    const tmpKey2 = uniquePath("hufi-test-key");
     const { code, stdout } = await runCli(["--key-file", tmpKey2, "auth", "generate", "--json"]);
     expect(code).toBe(0);
     const parsed = JSON.parse(stdout);
     expect(parsed.address).toMatch(/^0x[0-9a-fA-F]{40}$/);
-    expect(parsed.keyPath).toContain("hufi-test-key");
+    expect(parsed.keyPath.endsWith(".json")).toBe(true);
   });
 
   test("auth status --json shows state", async () => {
@@ -119,6 +161,168 @@ describe("auth commands", () => {
     const parsed = JSON.parse(stdout);
     expect(parsed.apiUrl).toBe("https://ro.hu.finance");
     expect(typeof parsed.authenticated).toBe("boolean");
+    expect(typeof parsed.profile).toBe("string");
+  });
+
+  test("profile flag scopes auth state independently", async () => {
+    const mock = startMockApis();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-profiles-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+      })
+    );
+
+    try {
+      const loginA = await runCli([
+        "--config-file", configFile,
+        "--profile", "alpha",
+        "auth", "login",
+        "--private-key", "0x59c6995e998f97a5a0044966f0945382f9b37fd0f9f4b5c9d6c1a1f3c7a2d8f1",
+      ]);
+      expect(loginA.code).toBe(0);
+      expect(loginA.stdout).toContain("Authenticated profile 'alpha'");
+
+      const loginB = await runCli([
+        "--config-file", configFile,
+        "--profile", "beta",
+        "auth", "login",
+        "--private-key", "0x8b3a350cf5c34c9194ca3a545d1f6d4d927f3e49fcb23e2dc6e2d7f5d3c4f123",
+      ]);
+      expect(loginB.code).toBe(0);
+      expect(loginB.stdout).toContain("Authenticated profile 'beta'");
+
+      const statusA = await runCli(["--config-file", configFile, "--profile", "alpha", "auth", "status", "--json"]);
+      const statusB = await runCli(["--config-file", configFile, "--profile", "beta", "auth", "status", "--json"]);
+      expect(JSON.parse(statusA.stdout).profile).toBe("alpha");
+      expect(JSON.parse(statusA.stdout).authenticated).toBe(true);
+      expect(JSON.parse(statusB.stdout).profile).toBe("beta");
+      expect(JSON.parse(statusB.stdout).authenticated).toBe(true);
+    } finally {
+      mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("profile short flag scopes auth state independently", async () => {
+    const mock = startMockApis();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-profiles-short-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+      })
+    );
+
+    try {
+      const login = await runCli([
+        "--config-file", configFile,
+        "-p", "gamma",
+        "auth", "login",
+        "--private-key", "0x59c6995e998f97a5a0044966f0945382f9b37fd0f9f4b5c9d6c1a1f3c7a2d8f1",
+      ]);
+      expect(login.code).toBe(0);
+      expect(login.stdout).toContain("Authenticated profile 'gamma'");
+
+      const status = await runCli(["--config-file", configFile, "-p", "gamma", "auth", "status", "--json"]);
+      expect(status.code).toBe(0);
+      expect(JSON.parse(status.stdout).profile).toBe("gamma");
+      expect(JSON.parse(status.stdout).authenticated).toBe(true);
+    } finally {
+      mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("auth login with --private-key persists a profile key under config dir", async () => {
+    const mock = startMockApis();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-profile-persist-"));
+    const configFile = join(dir, "config.json");
+
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+      })
+    );
+
+    try {
+      const login = await runCli([
+        "--config-file", configFile,
+        "--profile", "alpha",
+        "auth", "login",
+        "--private-key", "0x59c6995e998f97a5a0044966f0945382f9b37fd0f9f4b5c9d6c1a1f3c7a2d8f1",
+      ]);
+      expect(login.code).toBe(0);
+      expect(login.stdout).toContain("Authenticated profile 'alpha'");
+
+      const savedConfig = JSON.parse(readFileSync(configFile, "utf-8"));
+      expect(savedConfig.profiles.alpha.keyFile).toBe("/home/whoami/.hufi-cli/key.alpha.json");
+
+      const status = await runCli([
+        "--config-file", configFile,
+        "--profile", "alpha",
+        "auth", "status",
+        "--json",
+      ]);
+      expect(status.code).toBe(0);
+      expect(JSON.parse(status.stdout).authenticated).toBe(true);
+    } finally {
+      mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("auth list shows profiles and active marker", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-auth-list-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: "https://ro.hu.finance",
+        launcherApiUrl: "https://cl.hu.finance",
+        activeProfile: "beta",
+        profiles: {
+          alpha: {
+            address: "0x0000000000000000000000000000000000000001",
+            keyFile: "/home/whoami/.hufi-cli/key.alpha.json",
+          },
+          beta: {
+            address: "0x0000000000000000000000000000000000000002",
+            accessToken: "token",
+            keyFile: "/home/whoami/.hufi-cli/key.beta.json",
+          },
+        },
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli(["--config-file", configFile, "auth", "list"]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("Profiles");
+      expect(stdout).toContain("  alpha  not authenticated");
+      expect(stdout).toContain("* beta  authenticated");
+      expect(stdout).toContain("Local keys");
+
+      const json = await runCli(["--config-file", configFile, "auth", "list", "--json"]);
+      expect(json.code).toBe(0);
+      const parsed = JSON.parse(json.stdout);
+      expect(parsed.profiles.length).toBeGreaterThanOrEqual(2);
+      expect(Array.isArray(parsed.localKeys)).toBe(true);
+      const beta = parsed.profiles.find((entry: { name: string }) => entry.name === "beta");
+      expect(beta.active).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test("cli exits with validation error for invalid config", async () => {
@@ -161,6 +365,45 @@ describe("auth commands", () => {
       expect(stdout).toContain("more campaigns available");
       expect(stdout).toContain("duration:   2026-01-01 00:00:00 ~ 2026-01-02 00:00:00");
       expect(stdout).toContain("funded:     1 USDT  paid: 0.1  balance: 0.9 (90.0%)");
+    } finally {
+      mock.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("campaign leaderboard text output shows full entry fields", async () => {
+    const mock = startMockApis();
+    const dir = mkdtempSync(join(tmpdir(), "hufi-cli-leaderboard-"));
+    const configFile = join(dir, "config.json");
+    writeFileSync(
+      configFile,
+      JSON.stringify({
+        recordingApiUrl: mock.recordingUrl,
+        launcherApiUrl: mock.launcherUrl,
+        defaultChainId: 137,
+      })
+    );
+
+    try {
+      const { code, stdout } = await runCli([
+        "--config-file",
+        configFile,
+        "campaign",
+        "leaderboard",
+        "--chain-id",
+        "137",
+        "--address",
+        "0x1111111111111111111111111111111111111111",
+      ]);
+      expect(code).toBe(0);
+      expect(stdout).toContain("Leaderboard (rewards):");
+      expect(stdout).toContain("total: 150");
+      expect(stdout).toContain("updated: 2026-03-22 10:11:12");
+      expect(stdout).toContain("score:");
+      expect(stdout).toContain("result:");
+      expect(stdout).toContain("reward:");
+      expect(stdout).not.toContain("total: -");
+      expect(stdout).not.toContain("updated: -");
     } finally {
       mock.stop();
       rmSync(dir, { recursive: true, force: true });
@@ -282,7 +525,9 @@ describe("auth commands", () => {
     try {
       const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "joined"]);
       expect(code).toBe(0);
+      expect(stdout).toContain("Profile: default");
       expect(stdout).toContain("Joined campaigns (1):");
+      expect(stdout).toContain("Address: 0x0000000000000000000000000000000000000001");
       expect(stdout).toContain("mexc MOCK/USDT (MARKET_MAKING)");
       expect(stdout).toContain("address:    0x1111111111111111111111111111111111111111");
       expect(stdout).toContain("status:     active");
@@ -347,6 +592,8 @@ describe("auth commands", () => {
     try {
       const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "joined"]);
       expect(code).toBe(0);
+      expect(stdout).toContain("Profile: default");
+      expect(stdout).toContain("Address: 0x0000000000000000000000000000000000000001");
       expect(stdout).toContain("mexc MOCK/USDT (MARKET_MAKING)");
       expect(stdout).not.toContain("launcher:");
       expect(stdout).not.toContain("launcher:   -");
@@ -402,6 +649,8 @@ describe("auth commands", () => {
         "0xb36e0d9ce101afc891e17ff1cd400997dfed28e7",
       ]);
       expect(code).toBe(0);
+      expect(stdout).toContain("Profile: default");
+      expect(stdout).toContain("Address: 0x0000000000000000000000000000000000000001");
       expect(stdout).toContain("Campaign Progress");
       expect(stdout).toContain("[Window]");
       expect(stdout).toContain("From            2026-03-22 13:50:09 UTC");
@@ -490,6 +739,8 @@ describe("auth commands", () => {
         "0x0000000000000000000000000000000000000001",
       ]);
       expect(staking.code).toBe(0);
+      expect(staking.stdout).toContain("Profile: default");
+      expect(staking.stdout).toContain("Address: 0x0000000000000000000000000000000000000001");
       expect(staking.stdout).toContain("Staking status (chain 137):");
       expect(staking.stdout).toContain("Lock period:     1000 blocks");
 

@@ -5,6 +5,7 @@ import { getDefaultChainId } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
 import { toCsvRows } from "../lib/export.ts";
 import { requireAuthAddress } from "../lib/require-auth.ts";
+import { getSelectedProfileName } from "../lib/config.ts";
 
 export function createDashboardCommand(): Command {
   const dashboard = new Command("dashboard")
@@ -83,6 +84,7 @@ export function createDashboardCommand(): Command {
           return;
         }
 
+        printText(`Profile: ${getSelectedProfileName()}`);
         printText(`Wallet: ${address}  Chain: ${opts.chainId}\n`);
 
         if (stakingInfo) {

@@ -9,6 +9,14 @@ import {
 import { printJson, printText, maskSecret } from "../lib/output.ts";
 import { requireAuthToken } from "../lib/require-auth.ts";
 import type { RevalidateResult } from "../types/exchange.ts";
+import { getActiveProfile, getSelectedProfileName } from "../lib/config.ts";
+
+function printProfileContext() {
+  printText(`Profile: ${getSelectedProfileName()}`);
+  if (getActiveProfile().address) {
+    printText(`Address: ${getActiveProfile().address}`);
+  }
+}
 
 const authHintByAction: Record<string, string> = {
   register:
@@ -83,6 +91,7 @@ export function createExchangeCommand(): Command {
         if (opts.json) {
           printJson(result);
         } else {
+          printProfileContext();
           printText(
             `Registered ${opts.name} API key ${maskSecret(opts.apiKey)}`
           );
@@ -109,6 +118,7 @@ export function createExchangeCommand(): Command {
         if (opts.json) {
           printJson(keys);
         } else {
+          printProfileContext();
           if (keys.length === 0) {
             printText("No exchange API keys registered.");
           } else {
@@ -146,6 +156,7 @@ export function createExchangeCommand(): Command {
         if (opts.json) {
           printJson({ deleted: true, exchange_name: exchangeName });
         } else {
+          printProfileContext();
           printText(`Deleted API keys for ${exchangeName}.`);
         }
       } catch (err: unknown) {
@@ -180,6 +191,7 @@ export function createExchangeCommand(): Command {
         if (opts.json) {
           printJson(result);
         } else {
+          printProfileContext();
           for (const line of formatRevalidateText(exchangeName, result)) {
             printText(line);
           }

@@ -1,7 +1,80 @@
 import { Command } from "commander";
 import { authenticate, createWallet } from "../services/recording/auth.ts";
-import { loadConfig, updateConfig, saveKey, loadKey, getKeyPath, keyExists, getConfigPath } from "../lib/config.ts";
+import {
+  loadConfig,
+  updateConfig,
+  updateProfile,
+  saveKey,
+  loadKey,
+  getKeyPath,
+  keyExists,
+  getConfigPath,
+  getSelectedProfileName,
+  getActiveProfile,
+  listLocalKeys,
+} from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
+
+function listProfiles() {
+  const config = loadConfig();
+  const activeProfile = config.activeProfile ?? getSelectedProfileName();
+  const profileNames = Object.keys(config.profiles ?? {});
+  const names = profileNames.length > 0 ? profileNames : [activeProfile];
+
+  return names
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => {
+      const profile = config.profiles?.[name] ?? {};
+      return {
+        name,
+        active: name === activeProfile,
+        address: profile.address ?? null,
+        authenticated: Boolean(profile.accessToken),
+        keyPath: profile.keyFile ?? null,
+      };
+    });
+}
+
+function getAuthListData() {
+  return {
+    profiles: listProfiles(),
+    localKeys: listLocalKeys(),
+  };
+}
+
+export function printAuthList(json = false) {
+  const result = getAuthListData();
+
+  if (json) {
+    printJson(result);
+    return;
+  }
+
+  printText("Profiles");
+  if (result.profiles.length === 0) {
+    printText("  No auth profiles found.");
+  } else {
+    for (const profile of result.profiles) {
+      const marker = profile.active ? "*" : " ";
+      const status = profile.authenticated ? "authenticated" : "not authenticated";
+      const address = profile.address ?? "-";
+      printText(`${marker} ${profile.name}  ${status}  ${address}`);
+      if (profile.keyPath) {
+        printText(`    key: ${profile.keyPath}`);
+      }
+    }
+  }
+
+  printText("");
+  printText("Local keys");
+  if (result.localKeys.length === 0) {
+    printText("  No local key files found.");
+  } else {
+    for (const key of result.localKeys) {
+      printText(`  ${key.profile}  ${key.address ?? "-"}  ${key.keyPath}`);
+    }
+  }
+}
 
 export function createAuthCommand(): Command {
   const auth = new Command("auth").description("Authentication commands");
@@ -27,17 +100,21 @@ export function createAuthCommand(): Command {
       try {
         const result = await authenticate(baseUrl, privateKey);
 
-        updateConfig({
-          recordingApiUrl: baseUrl,
+        if (opts.privateKey) {
+          saveKey(opts.privateKey, result.address);
+        }
+
+        updateConfig({ recordingApiUrl: baseUrl });
+        updateProfile(getSelectedProfileName(), {
           address: result.address,
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
         });
 
         if (opts.json) {
-          printJson({ address: result.address, accessToken: result.accessToken });
+          printJson({ profile: getSelectedProfileName(), address: result.address, accessToken: result.accessToken });
         } else {
-          printText(`Authenticated as ${result.address}`);
+          printText(`Authenticated profile '${getSelectedProfileName()}' as ${result.address}`);
           printText(`Private key loaded from ${getKeyPath()}`);
           printText(`Tokens saved to ${getConfigPath()}`);
         }
@@ -73,11 +150,20 @@ export function createAuthCommand(): Command {
       saveKey(wallet.privateKey, wallet.address);
       const keyPath = getKeyPath();
       if (opts.json) {
-        printJson({ address: wallet.address, keyPath });
+        printJson({ profile: getSelectedProfileName(), address: wallet.address, keyPath });
       } else {
+        printText(`Profile: ${getSelectedProfileName()}`);
         printText(`Address: ${wallet.address}`);
         printText(`Private key saved to ${keyPath}`);
       }
+    });
+
+  auth
+    .command("list")
+    .description("List saved auth profiles and local key files")
+    .option("--json", "Output as JSON")
+    .action((opts) => {
+      printAuthList(Boolean(opts.json));
     });
 
   auth
@@ -86,20 +172,24 @@ export function createAuthCommand(): Command {
     .option("--json", "Output as JSON")
     .action((opts) => {
       const config = loadConfig();
+      const profile = getActiveProfile();
       const status = {
-        address: config.address ?? null,
+        profile: getSelectedProfileName(),
+        address: profile.address ?? config.address ?? null,
         apiUrl: config.recordingApiUrl,
-        authenticated: Boolean(config.accessToken),
+        authenticated: Boolean(profile.accessToken),
       };
 
       if (opts.json) {
         printJson(status);
       } else {
         if (status.authenticated) {
+          printText(`Profile: ${status.profile}`);
           printText(`Authenticated as ${status.address}`);
           printText(`API: ${status.apiUrl}`);
         } else {
-          printText("Not authenticated. Run: hufi-cli auth login -k <key>");
+          printText(`Profile: ${status.profile}`);
+          printText(`Not authenticated. Run: hufi --profile ${status.profile} auth login -k <key>`);
         }
       }
     });

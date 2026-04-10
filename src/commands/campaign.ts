@@ -13,7 +13,7 @@ import {
   listLauncherCampaigns,
   getLauncherCampaign,
 } from "../services/launcher/campaign.ts";
-import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
+import { loadConfig, getDefaultChainId, loadKey, getActiveProfile, getSelectedProfileName } from "../lib/config.ts";
 import { getStakingInfo } from "../services/staking.ts";
 import { printJson, printText } from "../lib/output.ts";
 import { runWatchLoop } from "../lib/watch.ts";
@@ -138,6 +138,14 @@ function printCampaignSummary(
   }
 }
 
+function printProfileContext(address?: string): void {
+  printText(`Profile: ${getSelectedProfileName()}`);
+  if (address) {
+    printText(`Address: ${address}`);
+  }
+  printText("");
+}
+
 export function createCampaignCommand(): Command {
   const campaign = new Command("campaign").description(
     "Campaign management commands"
@@ -165,12 +173,12 @@ export function createCampaignCommand(): Command {
         );
 
         let joinedKeys = new Set<string>();
-        if (config.accessToken) {
+        if (getActiveProfile().accessToken) {
           const recordingUrl = config.recordingApiUrl.replace(/\/+$/, "");
           try {
             const joinedResult = await listJoinedCampaigns(
               recordingUrl,
-              config.accessToken,
+              getActiveProfile().accessToken as string,
               100
             );
             joinedKeys = new Set(
@@ -271,6 +279,7 @@ export function createCampaignCommand(): Command {
         if (opts.json) {
           printJson(result);
         } else {
+          printProfileContext(getActiveProfile().address);
           const campaigns = result.results ?? [];
           if (campaigns.length === 0) {
             printText("No joined campaigns found.");
@@ -340,6 +349,7 @@ export function createCampaignCommand(): Command {
         if (opts.json) {
           printJson(status);
         } else {
+          printProfileContext(getActiveProfile().address);
           printText(`Status: ${status.status}`);
           if (status.joined_at) printText(`Joined at: ${status.joined_at}`);
           if (status.reason) printText(`Reason: ${status.reason}`);
@@ -376,6 +386,7 @@ export function createCampaignCommand(): Command {
           if (opts.json) {
             printJson(joinStatus);
           } else {
+            printProfileContext(getActiveProfile().address);
             printText("Already joined this campaign.");
           }
           return;
@@ -391,6 +402,7 @@ export function createCampaignCommand(): Command {
         if (opts.json) {
           printJson(result);
         } else {
+          printProfileContext(getActiveProfile().address);
           printText("Campaign joined successfully.");
           if (result.id) printText(`Campaign ID: ${result.id}`);
         }
@@ -442,6 +454,7 @@ export function createCampaignCommand(): Command {
           if (opts.json) {
             printJson(result);
           } else {
+            printProfileContext(getActiveProfile().address);
             const r = result as Record<string, unknown>;
             if (r.message) {
               printText(String(r.message));
@@ -522,8 +535,18 @@ export function createCampaignCommand(): Command {
             printText("No leaderboard entries.");
           } else {
             printText(`Leaderboard (${opts.rankBy}):\n`);
+            printText(
+              `  total: ${formatMetricValue(result.total)}  updated: ${formatCampaignTimestamp(result.updated_at ?? undefined)}`
+            );
+            printText("");
             entries.forEach((entry, i) => {
-              printText(`  ${i + 1}. ${entry.address}  ${entry.result}`);
+              const parts = [
+                `score: ${formatMetricValue(entry.score)}`,
+                `result: ${formatMetricValue(entry.result)}`,
+                `reward: ${formatMetricValue(entry.estimated_reward)}`,
+              ];
+              printText(`  ${i + 1}. ${entry.address}`);
+              printText(`     ${parts.join("  ")}`);
             });
           }
         }
@@ -558,8 +581,7 @@ export function createCampaignCommand(): Command {
         process.exit(1);
       }
 
-      const config = loadConfig();
-      const address = config.address;
+      const address = getActiveProfile().address;
       if (!address) {
         printText("Not authenticated. Run: hufi auth login --private-key <key>");
         process.exit(1);

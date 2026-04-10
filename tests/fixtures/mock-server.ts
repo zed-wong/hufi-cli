@@ -62,8 +62,15 @@ export function startMockApis(): MockServers {
       if (req.method === "GET" && url.pathname.includes("/leaderboard")) {
         return new Response(JSON.stringify({
           data: [
-            { address: "0x5555555555555555555555555555555555555555", result: 12.34 },
+            {
+              address: "0x5555555555555555555555555555555555555555",
+              score: 98.76,
+              result: 12.34,
+              estimated_reward: 7.89,
+            },
           ],
+          total: 150,
+          updated_at: "2026-03-22T10:11:12.000Z",
         }), {
           headers: { "Content-Type": "application/json" },
         });

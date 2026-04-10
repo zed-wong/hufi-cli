@@ -6,4 +6,13 @@ export interface Config {
   refreshToken?: string;
   defaultChainId?: number;
   rpcUrls?: Record<string, string>;
+  activeProfile?: string;
+  profiles?: Record<string, ProfileConfig>;
+}
+
+export interface ProfileConfig {
+  address?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  keyFile?: string;
 }

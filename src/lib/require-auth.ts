@@ -1,4 +1,4 @@
-import { loadConfig } from "./config.ts";
+import { getActiveProfile, getSelectedProfileName, loadConfig } from "./config.ts";
 import { printText } from "./output.ts";
 
 export interface AuthTokenContext {
@@ -12,27 +12,29 @@ export interface AuthAddressContext extends AuthTokenContext {
 
 export function requireAuthToken(): AuthTokenContext {
   const config = loadConfig();
-  if (!config.accessToken) {
-    printText("Not authenticated. Run: hufi auth login --private-key <key>");
+  const profile = getActiveProfile();
+  if (!profile.accessToken) {
+    printText(`Profile '${getSelectedProfileName()}' is not authenticated. Run: hufi --profile ${getSelectedProfileName()} auth login --private-key <key>`);
     process.exit(1);
   }
 
   return {
     baseUrl: config.recordingApiUrl.replace(/\/+$/, ""),
-    accessToken: config.accessToken,
+    accessToken: profile.accessToken,
   };
 }
 
 export function requireAuthAddress(): AuthAddressContext {
   const config = loadConfig();
-  if (!config.accessToken || !config.address) {
-    printText("Not authenticated. Run: hufi auth login --private-key <key>");
+  const profile = getActiveProfile();
+  if (!profile.accessToken || !profile.address) {
+    printText(`Profile '${getSelectedProfileName()}' is not authenticated. Run: hufi --profile ${getSelectedProfileName()} auth login --private-key <key>`);
     process.exit(1);
   }
 
   return {
     baseUrl: config.recordingApiUrl.replace(/\/+$/, ""),
-    accessToken: config.accessToken,
-    address: config.address,
+    accessToken: profile.accessToken,
+    address: profile.address,
   };
 }

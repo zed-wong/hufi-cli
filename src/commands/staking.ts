@@ -1,8 +1,15 @@
 import { Command } from "commander";
 import QRCode from "qrcode";
 import { getStakingInfo, stakeHMT, unstakeHMT, withdrawHMT } from "../services/staking.ts";
-import { loadConfig, getDefaultChainId, loadKey } from "../lib/config.ts";
+import { loadConfig, getDefaultChainId, loadKey, getActiveProfile, getSelectedProfileName } from "../lib/config.ts";
 import { printJson, printText } from "../lib/output.ts";
+
+function printProfileContext(address?: string) {
+  printText(`Profile: ${getSelectedProfileName()}`);
+  if (address) {
+    printText(`Address: ${address}`);
+  }
+}
 
 function requireKey(): string {
   const key = loadKey();
@@ -26,7 +33,7 @@ export function createStakingCommand(): Command {
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       const config = loadConfig();
-      const address = opts.address ?? config.address;
+      const address = opts.address ?? getActiveProfile().address ?? config.address;
       if (!address) {
         statusCmd.help();
         return;
@@ -38,8 +45,8 @@ export function createStakingCommand(): Command {
         if (opts.json) {
           printJson(info);
         } else {
+          printProfileContext(address);
           printText(`Staking status (chain ${info.chainId}):`);
-          printText(`  Address:         ${address}`);
           printText(`  HMT Balance:     ${Number(info.hmtBalance).toLocaleString()} HMT`);
           printText(`  Staked:          ${Number(info.stakedTokens).toLocaleString()} HMT`);
           printText(`  Available:       ${Number(info.availableStake).toLocaleString()} HMT`);
@@ -75,6 +82,7 @@ export function createStakingCommand(): Command {
       const privateKey = requireKey();
 
       try {
+        printProfileContext(getActiveProfile().address);
         printText(`Staking ${amount} HMT on chain ${opts.chainId}...`);
         const hash = await stakeHMT(privateKey, amount, opts.chainId);
 
@@ -109,6 +117,7 @@ export function createStakingCommand(): Command {
       const privateKey = requireKey();
 
       try {
+        printProfileContext(getActiveProfile().address);
         printText(`Unstaking ${amount} HMT on chain ${opts.chainId}...`);
         const hash = await unstakeHMT(privateKey, amount, opts.chainId);
 
@@ -134,6 +143,7 @@ export function createStakingCommand(): Command {
       const privateKey = requireKey();
 
       try {
+        printProfileContext(getActiveProfile().address);
         printText(`Withdrawing unlocked HMT on chain ${opts.chainId}...`);
         const hash = await withdrawHMT(privateKey, opts.chainId);
 
@@ -157,7 +167,7 @@ export function createStakingCommand(): Command {
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       const config = loadConfig();
-      const address = opts.address ?? config.address;
+      const address = opts.address ?? getActiveProfile().address ?? config.address;
       if (!address) {
         depositCmd.help();
         return;
@@ -169,6 +179,8 @@ export function createStakingCommand(): Command {
       }
 
       const qr = await QRCode.toString(address, { type: "terminal", small: true });
+      printProfileContext(address);
+      printText("");
       printText("Deposit HMT to this address:\n");
       printText(qr);
       printText(address);

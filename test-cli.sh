@@ -4,6 +4,7 @@ set -e
 
 CLI="./dist/cli.js"
 TEST_KEY="$HOME/.hufi-cli/key.test.json"
+TEST_PROFILE_KEY="$HOME/.hufi-cli/key.alpha-test.json"
 TEST_CONFIG="$HOME/.hufi-cli/config.test.json"
 BAD_AUTH_CONFIG="$HOME/.hufi-cli/config.bad-auth.test.json"
 MOCK_RPC_INFO="$(mktemp)"
@@ -17,7 +18,7 @@ yellow='\033[0;33m'
 dim='\033[2m'
 reset='\033[0m'
 
-rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG" "$MOCK_RPC_INFO"
+rm -f "$TEST_KEY" "$TEST_PROFILE_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG" "$MOCK_RPC_INFO"
 
 bun tests/fixtures/mock-rpc-server.ts > "$MOCK_RPC_INFO" 2>/dev/null &
 MOCK_RPC_PID=$!
@@ -27,7 +28,7 @@ cleanup() {
     kill "$MOCK_RPC_PID" 2>/dev/null || true
     wait "$MOCK_RPC_PID" 2>/dev/null || true
   fi
-  rm -f "$TEST_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG" "$MOCK_RPC_INFO"
+  rm -f "$TEST_KEY" "$TEST_PROFILE_KEY" "$TEST_CONFIG" "$BAD_AUTH_CONFIG" "$MOCK_RPC_INFO"
 }
 
 trap cleanup EXIT
@@ -162,6 +163,15 @@ run_json "auth generate has address" "address" "^0x[0-9a-fA-F]{40}$" $TEST_FLAGS
 run "auth login (saved key)" $TEST_FLAGS auth login
 run_expect "auth status shows address" "0x" $TEST_FLAGS auth status
 run_json "auth status --json has authenticated" "authenticated" "true" $TEST_FLAGS auth status --json
+run_expect "auth list shows profiles section" "Profiles" $TEST_FLAGS auth list
+run_expect "-p without value prints profiles section" "Profiles" --config-file "$TEST_CONFIG" -p
+run_expect "-p without value prints local keys section" "Local keys" --config-file "$TEST_CONFIG" -p
+run_expect "auth list shows local keys section" "Local keys" $TEST_FLAGS auth list
+run_expect "auth list shows default profile" "default" $TEST_FLAGS auth list
+run "auth login with profile alpha-test persists profile key" --config-file "$TEST_CONFIG" -p alpha-test auth login --private-key 0x59c6995e998f97a5a0044966f0945382f9b37fd0f9f4b5c9d6c1a1f3c7a2d8f1
+run_expect "auth list shows alpha-test profile" "alpha-test" --config-file "$TEST_CONFIG" auth list
+run_json "auth status --json with profile alpha-test is authenticated" "authenticated" "true" --config-file "$TEST_CONFIG" -p alpha-test auth status --json
+run_expect "profile alpha-test reuses persisted key path" "$TEST_PROFILE_KEY" --config-file "$TEST_CONFIG" -p alpha-test auth login
 
 echo "--- Campaign ---"
 run_expect "campaign list" "Available campaigns" campaign list --limit 1
@@ -172,12 +182,13 @@ run_expect "campaign get" "0x8ec5" campaign get --chain-id 137 --address 0x8ec51
 run "campaign get --json" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
 run "campaign joined" $TEST_FLAGS campaign joined
 run "campaign joined --json" $TEST_FLAGS campaign joined --json
+run_expect "campaign status shows active profile" "Profile: alpha-test" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 run_expect "campaign status" "Status" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 run "campaign status --json" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
 run_expect "campaign leaderboard" "Leaderboard" $TEST_FLAGS campaign leaderboard --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 
 echo "--- Exchange ---"
-run "exchange list" $TEST_FLAGS exchange list
+run_expect "exchange list shows active profile" "Profile: alpha-test" $TEST_FLAGS exchange list
 run "exchange list --json" $TEST_FLAGS exchange list --json
 run_expect "exchange delete --help shows positional name" "exchange delete \[name\]" exchange delete --help
 run_expect "exchange revalidate --help shows positional name" "exchange revalidate \[name\]" exchange revalidate --help
@@ -187,12 +198,14 @@ run_expect "exchange revalidate --help" "Revalidate" exchange revalidate --help
 echo "--- Staking ---"
 run_expect "staking stake --help shows positional amount" "staking stake \[amount\]" staking stake --help
 run_expect "staking unstake --help shows positional amount" "staking unstake \[amount\]" staking unstake --help
+run_expect "staking status shows active profile" "Profile: alpha-test" $TEST_FLAGS staking status --chain-id 137
 run_expect "staking status" "chain 137" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5
 run_json "staking status --json" "stakedTokens" "^[0-9]" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5 --json
 run_json "staking status --json" "lockPeriod" "^[0-9]" staking status --chain-id 137 --address 0x0F5d66E4c8d2aF5a5AcD0e2Dc3526a72a9206cc5 --json
 run_expect "staking deposit" "Deposit HMT" staking deposit
 
 echo "--- Dashboard ---"
+run_expect "dashboard shows active profile" "Profile: alpha-test" $TEST_FLAGS dashboard
 run_expect "dashboard" "Wallet:" $TEST_FLAGS dashboard
 run_json "dashboard --json" "address" "^0x" $TEST_FLAGS dashboard --json
 run_json "dashboard --json" "staking" "{" $TEST_FLAGS dashboard --json
