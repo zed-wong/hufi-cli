@@ -27,6 +27,9 @@ hufi-cli auth generate
 # Login with saved key
 hufi-cli auth login
 
+# List configured profiles and local key files
+hufi-cli auth list
+
 # Browse campaigns
 hufi-cli campaign list
 ```
@@ -37,14 +40,30 @@ hufi-cli campaign list
 
 | Command | Description |
 |---------|-------------|
-| `auth generate` | Generate a new EVM wallet (saves to `~/.hufi-cli/key.json`) |
+| `auth generate` | Generate a new EVM wallet for the active profile |
 | `auth login` | Authenticate with Recording Oracle (uses saved key by default) |
+| `auth list` | List configured profiles and local key files |
 | `auth status` | Show current auth status |
 
 ```bash
 hufi-cli auth generate --json
 hufi-cli auth login --private-key <key>
+hufi-cli auth list
 hufi-cli auth status
+```
+
+Profile-aware auth and key storage:
+
+- default profile key: `~/.hufi-cli/key.json`
+- named profile key: `~/.hufi-cli/key.<profile>.json`
+- use `-p, --profile <name>` to switch profile context
+- run `hufi-cli -p` to print the same profile/key inventory as `auth list`
+
+```bash
+hufi-cli -p alpha auth login --private-key <key>
+hufi-cli -p alpha exchange list
+hufi-cli -p beta auth status
+hufi-cli -p
 ```
 
 ### campaign
@@ -126,6 +145,8 @@ hufi-cli exchange delete mexc
 
 You must run `hufi-cli auth login` before `exchange register`, `exchange list`, `exchange delete`, or `exchange revalidate`.
 
+Exchange text output includes the active profile and address so it is obvious which authenticated wallet is being used.
+
 ### staking
 
 | Command | Description |
@@ -147,6 +168,8 @@ hufi-cli staking withdraw                                  # withdraw unlocked t
 
 Supports Polygon (chain 137) and Ethereum (chain 1). Staking contract: `0x01D1...07F1D` on Polygon.
 
+Profile-scoped staking commands print the active profile and resolved address in text output.
+
 ### dashboard
 
 Portfolio overview — staking, active campaigns, and progress in one view.
@@ -158,12 +181,15 @@ hufi-cli dashboard --export csv # export active campaign rows as CSV
 hufi-cli dashboard --export json
 ```
 
+Dashboard text output includes the active profile.
+
 ## Global Options
 
 | Option | Description |
 |--------|-------------|
 | `--config-file <path>` | Custom config file (default: `~/.hufi-cli/config.json`) |
 | `--key-file <path>` | Custom key file (default: `~/.hufi-cli/key.json`) |
+| `-p, --profile [name]` | Select a profile, or print available profiles when used without a value |
 | `-V, --version` | Show version |
 | `-h, --help` | Show help |
 
@@ -178,8 +204,15 @@ Stored at `~/.hufi-cli/config.json`:
   "recordingApiUrl": "https://ro.hu.finance",
   "launcherApiUrl": "https://cl.hu.finance",
   "defaultChainId": 137,
-  "address": "0x...",
-  "accessToken": "..."
+  "activeProfile": "default",
+  "profiles": {
+    "default": {
+      "address": "0x...",
+      "accessToken": "...",
+      "refreshToken": "...",
+      "keyFile": "~/.hufi-cli/key.json"
+    }
+  }
 }
 ```
 

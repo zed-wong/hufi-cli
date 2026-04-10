@@ -19,7 +19,7 @@ The entrypoint wires those groups in `src/cli.ts`.
 Every invocation follows the same high-level path:
 
 1. Parse flags and subcommands with Commander.
-2. Apply global overrides for `--config-file` and `--key-file`.
+2. Apply global overrides for `--config-file`, `--key-file`, and `-p/--profile`.
 3. Load config defaults from `src/lib/config.ts`.
 4. Validate config shape before running the selected command.
 5. Execute the command handler.
@@ -36,15 +36,24 @@ Key fields:
 - `recordingApiUrl`
 - `launcherApiUrl`
 - `defaultChainId`
-- `address`
-- `accessToken`
-- `refreshToken`
+- `activeProfile`
+- `profiles`
 
 Stored by default in `~/.hufi-cli/config.json`.
 
+Each profile can hold:
+
+- `address`
+- `accessToken`
+- `refreshToken`
+- `keyFile`
+
 ### Key material
 
-Wallet material is generated or loaded through `auth` commands and stored by default in `~/.hufi-cli/key.json`.
+Wallet material is generated or loaded through `auth` commands and stored by default in:
+
+- `~/.hufi-cli/key.json` for the default profile
+- `~/.hufi-cli/key.<profile>.json` for named profiles
 
 This file contains:
 
@@ -91,7 +100,7 @@ If validation fails, the CLI exits before running a subcommand.
 - an authenticated access token
 - a configured address
 
-This keeps command handlers small and ensures auth failures produce consistent messaging.
+These checks are now profile-aware and resolve identity from the selected profile or active profile.
 
 ### Campaign command validation
 
@@ -114,6 +123,7 @@ This keeps command handlers small and ensures auth failures produce consistent m
 The CLI uses `src/lib/output.ts` to keep text and JSON output consistent.
 
 - Human output is concise and task-oriented.
+- Profile-scoped text output surfaces the active profile, and often the resolved wallet address, to make account context explicit.
 - JSON output is intended for scripting and automation.
 - Some help-first flows still print Commander help instead of a JSON error object.
 
@@ -122,6 +132,7 @@ The CLI uses `src/lib/output.ts` to keep text and JSON output consistent.
 `test-cli.sh` is the main integration safety net. It currently covers:
 
 - auth generation and login flows
+- profile listing and local key discovery
 - campaign listing, detail, progress, leaderboard, and create validation
 - exchange list and help surfaces
 - exchange auth guidance for missing or invalid login state
