@@ -183,11 +183,7 @@ export function getSelectedProfileName(): string {
 export function getActiveProfile(): ProfileConfig {
   const config = loadConfig();
   const profileName = getSelectedProfileName();
-  const profile = config.profiles?.[profileName];
-  if (profile) {
-    return profile;
-  }
-  return config.profiles?.[DEFAULT_PROFILE] ?? {};
+  return config.profiles?.[profileName] ?? {};
 }
 
 export function getProfile(profileName = getSelectedProfileName()): ProfileConfig {

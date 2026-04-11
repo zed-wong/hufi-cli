@@ -172,6 +172,7 @@ run "auth login with profile alpha-test persists profile key" --config-file "$TE
 run_expect "auth list shows alpha-test profile" "alpha-test" --config-file "$TEST_CONFIG" auth list
 run_json "auth status --json with profile alpha-test is authenticated" "authenticated" "true" --config-file "$TEST_CONFIG" -p alpha-test auth status --json
 run_expect "profile alpha-test reuses persisted key path" "$TEST_PROFILE_KEY" --config-file "$TEST_CONFIG" -p alpha-test auth login
+run_json "unconfigured profile beta is not implicitly authenticated" "authenticated" "false" --config-file "$TEST_CONFIG" -p beta auth status --json
 
 echo "--- Campaign ---"
 run_expect "campaign list" "Available campaigns" campaign list --limit 1

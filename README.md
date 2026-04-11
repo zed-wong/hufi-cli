@@ -57,6 +57,7 @@ Profile-aware auth and key storage:
 - default profile key: `~/.hufi-cli/key.json`
 - named profile key: `~/.hufi-cli/key.<profile>.json`
 - use `-p, --profile <name>` to switch profile context
+- selecting a profile uses only that profile's auth state; it does not silently fall back to `default`
 - run `hufi-cli -p` to print the same profile/key inventory as `auth list`
 
 ```bash

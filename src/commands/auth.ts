@@ -19,9 +19,10 @@ function listProfiles() {
   const config = loadConfig();
   const activeProfile = config.activeProfile ?? getSelectedProfileName();
   const profileNames = Object.keys(config.profiles ?? {});
-  const names = profileNames.length > 0 ? profileNames : [activeProfile];
+  const names = new Set(profileNames.length > 0 ? profileNames : [activeProfile]);
+  names.add(activeProfile);
 
-  return names
+  return Array.from(names)
     .sort((a, b) => a.localeCompare(b))
     .map((name) => {
       const profile = config.profiles?.[name] ?? {};

@@ -100,7 +100,7 @@ If validation fails, the CLI exits before running a subcommand.
 - an authenticated access token
 - a configured address
 
-These checks are now profile-aware and resolve identity from the selected profile or active profile.
+These checks are profile-aware and resolve identity from the explicitly selected profile or the saved active profile. A selected named profile does not silently inherit auth state from the `default` profile.
 
 ### Campaign command validation
 
