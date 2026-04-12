@@ -3,7 +3,7 @@
   "version": "1.0.6",
   "type": "module",
   "bin": {
-    "hufi": "./dist/cli.js"
+    "hufi-cli": "./dist/cli.js"
   },
   "scripts": {
     "dev": "bun src/cli.ts",
