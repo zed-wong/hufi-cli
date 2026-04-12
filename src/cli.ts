@@ -11,7 +11,7 @@ import { loadConfig, setConfigFile, setKeyFile, setProfile, validateConfig } fro
 const program = new Command();
 
 program
-  .name("hufi")
+  .name("hufi-cli")
   .description("CLI tool for Hu.fi platform")
   .version("1.0.7")
   .option("--config-file <path>", "Custom config file path (default: ~/.hufi-cli/config.json)")
