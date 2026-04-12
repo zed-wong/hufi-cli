@@ -526,7 +526,7 @@ describe("auth commands", () => {
       const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "joined"]);
       expect(code).toBe(0);
       expect(stdout).toContain("Profile: default");
-      expect(stdout).toContain("Joined campaigns (1):");
+      expect(stdout).toContain("Active joined campaigns (1):");
       expect(stdout).toContain("Address: 0x0000000000000000000000000000000000000001");
       expect(stdout).toContain("mexc MOCK/USDT (MARKET_MAKING)");
       expect(stdout).toContain("address:    0x1111111111111111111111111111111111111111");
@@ -593,6 +593,7 @@ describe("auth commands", () => {
       const { code, stdout } = await runCli(["--config-file", configFile, "campaign", "joined"]);
       expect(code).toBe(0);
       expect(stdout).toContain("Profile: default");
+      expect(stdout).toContain("Active joined campaigns (1):");
       expect(stdout).toContain("Address: 0x0000000000000000000000000000000000000001");
       expect(stdout).toContain("mexc MOCK/USDT (MARKET_MAKING)");
       expect(stdout).not.toContain("launcher:");

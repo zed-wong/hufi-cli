@@ -146,6 +146,11 @@ function printProfileContext(address?: string): void {
   printText("");
 }
 
+function isCampaignActive(campaign: Record<string, unknown>): boolean {
+  const status = String(campaign.status ?? "").toLowerCase();
+  return status === "active";
+}
+
 export function createCampaignCommand(): Command {
   const campaign = new Command("campaign").description(
     "Campaign management commands"
@@ -263,8 +268,9 @@ export function createCampaignCommand(): Command {
 
   campaign
     .command("joined")
-    .description("List campaigns you have joined")
+    .description("List active campaigns you have joined")
     .option("-l, --limit <n>", "Max results", Number, 20)
+    .option("--all", "Include completed and cancelled joined campaigns")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       const { baseUrl, accessToken } = requireAuthAddress();
@@ -276,15 +282,24 @@ export function createCampaignCommand(): Command {
           opts.limit
         );
 
+        const campaigns = (result.results ?? []).filter((c) => {
+          if (opts.all) return true;
+          return isCampaignActive(c as Record<string, unknown>);
+        });
+        const output = { ...result, results: campaigns, total: campaigns.length };
+
         if (opts.json) {
-          printJson(result);
+          printJson(output);
         } else {
           printProfileContext(getActiveProfile().address);
-          const campaigns = result.results ?? [];
           if (campaigns.length === 0) {
-            printText("No joined campaigns found.");
+            printText(
+              opts.all
+                ? "No joined campaigns found."
+                : "No active joined campaigns found. Use --all to include completed and cancelled campaigns."
+            );
           } else {
-            printText(`Joined campaigns (${campaigns.length}):\n`);
+            printText(`${opts.all ? "Joined campaigns" : "Active joined campaigns"} (${campaigns.length}):\n`);
             for (const c of campaigns) {
               const record = c as Record<string, unknown>;
               const hasListMetadata = Boolean(

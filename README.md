@@ -73,7 +73,7 @@ hufi-cli -p
 |---------|-------------|
 | `campaign list` | Browse available campaigns |
 | `campaign get` | Get details for a specific campaign |
-| `campaign joined` | List campaigns you've joined |
+| `campaign joined` | List active campaigns you've joined |
 | `campaign join` | Join a campaign |
 | `campaign status` | Check join status |
 | `campaign progress` | Check your progress |
@@ -83,6 +83,8 @@ hufi-cli -p
 ```bash
 hufi-cli campaign list                                          # list active campaigns
 hufi-cli campaign list --status completed --chain-id 1          # completed on Ethereum
+hufi-cli campaign joined                                        # active joined campaigns only
+hufi-cli campaign joined --all                                  # include completed/cancelled joined campaigns
 hufi-cli campaign get --chain-id 137 --address 0x...            # campaign details
 hufi-cli campaign join --address 0x...                          # join (chain-id defaults to 137)
 hufi-cli campaign status --address 0x...                        # check status
@@ -93,6 +95,7 @@ hufi-cli campaign leaderboard --address 0x...                   # leaderboard
 ```
 
 `campaign list` and `campaign get` print exact campaign timestamps and round token balances for human-readable text output.
+`campaign joined` shows only active joined campaigns by default; use `--all` to include historical joined campaigns.
 
 #### Campaign Create
 

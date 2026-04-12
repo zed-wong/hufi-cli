@@ -182,6 +182,7 @@ run "campaign list --status completed" campaign list --status completed --limit 
 run_expect "campaign get" "0x8ec5" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 run "campaign get --json" campaign get --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148 --json
 run "campaign joined" $TEST_FLAGS campaign joined
+run "campaign joined --all" $TEST_FLAGS campaign joined --all
 run "campaign joined --json" $TEST_FLAGS campaign joined --json
 run_expect "campaign status shows active profile" "Profile: alpha-test" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148
 run_expect "campaign status" "Status" $TEST_FLAGS campaign status --chain-id 137 --address 0x8ec517d124a7ff4510d5888a0d9cafb380845148

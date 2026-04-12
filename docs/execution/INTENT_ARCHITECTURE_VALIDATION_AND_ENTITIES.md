@@ -67,7 +67,7 @@ This file contains:
 Files under `src/services/recording/` talk to the Recording Oracle for:
 
 - authentication
-- joined campaigns
+- joined campaigns, with CLI-side active filtering for `campaign joined` unless `--all` is passed
 - campaign progress and leaderboard data
 - exchange API key registration and validation
 
