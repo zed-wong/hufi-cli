@@ -13,11 +13,13 @@ import {
   listLauncherCampaigns,
   getLauncherCampaign,
 } from "../services/launcher/campaign.ts";
-import { loadConfig, getDefaultChainId, loadKey, getActiveProfile, getSelectedProfileName } from "../lib/config.ts";
+import { authenticate } from "../services/recording/auth.ts";
+import { loadConfig, getDefaultChainId, loadKey, getActiveProfile, getSelectedProfileName, updateProfile } from "../lib/config.ts";
 import { getStakingInfo } from "../services/staking.ts";
 import { printJson, printText } from "../lib/output.ts";
 import { runWatchLoop } from "../lib/watch.ts";
-import { requireAuthAddress } from "../lib/require-auth.ts";
+import { type AuthAddressContext, requireAuthAddress } from "../lib/require-auth.ts";
+import { ApiError } from "../lib/errors.ts";
 
 function formatCampaignTimestamp(value?: string): string {
   if (!value) return "-";
@@ -151,6 +153,62 @@ function isCampaignActive(campaign: Record<string, unknown>): boolean {
   return status === "active";
 }
 
+function isUnauthorizedError(err: unknown): err is ApiError {
+  return err instanceof ApiError && err.status === 401;
+}
+
+export async function withSingleUnauthorizedRetry<T>(
+  run: () => Promise<T>,
+  onUnauthorized: () => Promise<void>
+): Promise<T> {
+  try {
+    return await run();
+  } catch (err: unknown) {
+    if (!isUnauthorizedError(err)) {
+      throw err;
+    }
+    await onUnauthorized();
+    return run();
+  }
+}
+
+async function reauthenticateCampaignProfile(baseUrl: string): Promise<void> {
+  const privateKey = loadKey();
+  const profile = getSelectedProfileName();
+  if (!privateKey) {
+    throw new Error(
+      `Authentication expired for profile '${profile}' and no private key was found. Run: hufi --profile ${profile} auth login --private-key <key>`
+    );
+  }
+
+  try {
+    const result = await authenticate(baseUrl, privateKey);
+    updateProfile(profile, {
+      address: result.address,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Authentication expired and automatic re-login failed: ${message}. Run: hufi --profile ${profile} auth login --private-key <key>`
+    );
+  }
+}
+
+async function runWithCampaignAuthRetry<T>(
+  run: (auth: AuthAddressContext) => Promise<T>
+): Promise<T> {
+  let auth = requireAuthAddress();
+  return withSingleUnauthorizedRetry(
+    () => run(auth),
+    async () => {
+      await reauthenticateCampaignProfile(auth.baseUrl);
+      auth = requireAuthAddress();
+    }
+  );
+}
+
 export function createCampaignCommand(): Command {
   const campaign = new Command("campaign").description(
     "Campaign management commands"
@@ -273,66 +331,66 @@ export function createCampaignCommand(): Command {
     .option("--all", "Include completed and cancelled joined campaigns")
     .option("--json", "Output as JSON")
     .action(async (opts) => {
-      const { baseUrl, accessToken } = requireAuthAddress();
-
       try {
-        const result = await listJoinedCampaigns(
-          baseUrl,
-          accessToken,
-          opts.limit
-        );
+        await runWithCampaignAuthRetry(async ({ baseUrl, accessToken }) => {
+          const result = await listJoinedCampaigns(
+            baseUrl,
+            accessToken,
+            opts.limit
+          );
 
-        const campaigns = (result.results ?? []).filter((c) => {
-          if (opts.all) return true;
-          return isCampaignActive(c as Record<string, unknown>);
-        });
-        const output = { ...result, results: campaigns, total: campaigns.length };
+          const campaigns = (result.results ?? []).filter((c) => {
+            if (opts.all) return true;
+            return isCampaignActive(c as Record<string, unknown>);
+          });
+          const output = { ...result, results: campaigns, total: campaigns.length };
 
-        if (opts.json) {
-          printJson(output);
-        } else {
-          printProfileContext(getActiveProfile().address);
-          if (campaigns.length === 0) {
-            printText(
-              opts.all
-                ? "No joined campaigns found."
-                : "No active joined campaigns found. Use --all to include completed and cancelled campaigns."
-            );
+          if (opts.json) {
+            printJson(output);
           } else {
-            printText(`${opts.all ? "Joined campaigns" : "Active joined campaigns"} (${campaigns.length}):\n`);
-            for (const c of campaigns) {
-              const record = c as Record<string, unknown>;
-              const hasListMetadata = Boolean(
-                record.exchange_name ??
-                record.symbol ??
-                record.type ??
-                record.address ??
-                record.escrow_address
+            printProfileContext(getActiveProfile().address);
+            if (campaigns.length === 0) {
+              printText(
+                opts.all
+                  ? "No joined campaigns found."
+                  : "No active joined campaigns found. Use --all to include completed and cancelled campaigns."
               );
-
-              if (hasListMetadata) {
-                printCampaignSummary(record, {
-                  indent: "  ",
-                  showLauncher: typeof record.launcher === "string",
-                });
-              } else {
-                const exchange = String(record.exchange_name ?? "").trim();
-                const symbol = String(record.symbol ?? "").trim();
-                const exchangeSymbol = [exchange, symbol].filter(Boolean).join(" ");
-                const label =
-                  record.campaign_name ??
-                  record.name ??
-                  (exchangeSymbol || undefined) ??
+            } else {
+              printText(`${opts.all ? "Joined campaigns" : "Active joined campaigns"} (${campaigns.length}):\n`);
+              for (const c of campaigns) {
+                const record = c as Record<string, unknown>;
+                const hasListMetadata = Boolean(
+                  record.exchange_name ??
+                  record.symbol ??
+                  record.type ??
                   record.address ??
-                  record.escrow_address ??
-                  c.id ??
-                  "(unnamed campaign)";
-                printText(`  - ${label}`);
+                  record.escrow_address
+                );
+
+                if (hasListMetadata) {
+                  printCampaignSummary(record, {
+                    indent: "  ",
+                    showLauncher: typeof record.launcher === "string",
+                  });
+                } else {
+                  const exchange = String(record.exchange_name ?? "").trim();
+                  const symbol = String(record.symbol ?? "").trim();
+                  const exchangeSymbol = [exchange, symbol].filter(Boolean).join(" ");
+                  const label =
+                    record.campaign_name ??
+                    record.name ??
+                    (exchangeSymbol || undefined) ??
+                    record.address ??
+                    record.escrow_address ??
+                    c.id ??
+                    "(unnamed campaign)";
+                  printText(`  - ${label}`);
+                }
+                printText("");
               }
-              printText("");
             }
           }
-        }
+        });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to list joined campaigns: ${message}`);
@@ -351,24 +409,25 @@ export function createCampaignCommand(): Command {
         statusCmd.help();
         return;
       }
-      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
-        const status = await checkJoinStatus(
-          baseUrl,
-          accessToken,
-          opts.chainId,
-          opts.address
-        );
+        await runWithCampaignAuthRetry(async ({ baseUrl, accessToken }) => {
+          const status = await checkJoinStatus(
+            baseUrl,
+            accessToken,
+            opts.chainId,
+            opts.address
+          );
 
-        if (opts.json) {
-          printJson(status);
-        } else {
-          printProfileContext(getActiveProfile().address);
-          printText(`Status: ${status.status}`);
-          if (status.joined_at) printText(`Joined at: ${status.joined_at}`);
-          if (status.reason) printText(`Reason: ${status.reason}`);
-        }
+          if (opts.json) {
+            printJson(status);
+          } else {
+            printProfileContext(getActiveProfile().address);
+            printText(`Status: ${status.status}`);
+            if (status.joined_at) printText(`Joined at: ${status.joined_at}`);
+            if (status.reason) printText(`Reason: ${status.reason}`);
+          }
+        });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to check join status: ${message}`);
@@ -387,40 +446,41 @@ export function createCampaignCommand(): Command {
         joinCmd.help();
         return;
       }
-      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
-        const joinStatus = await checkJoinStatus(
-          baseUrl,
-          accessToken,
-          opts.chainId,
-          opts.address
-        );
+        await runWithCampaignAuthRetry(async ({ baseUrl, accessToken }) => {
+          const joinStatus = await checkJoinStatus(
+            baseUrl,
+            accessToken,
+            opts.chainId,
+            opts.address
+          );
 
-        if (joinStatus.status === "already_joined") {
+          if (joinStatus.status === "already_joined") {
+            if (opts.json) {
+              printJson(joinStatus);
+            } else {
+              printProfileContext(getActiveProfile().address);
+              printText("Already joined this campaign.");
+            }
+            return;
+          }
+
+          const result = await joinCampaign(
+            baseUrl,
+            accessToken,
+            opts.chainId,
+            opts.address
+          );
+
           if (opts.json) {
-            printJson(joinStatus);
+            printJson(result);
           } else {
             printProfileContext(getActiveProfile().address);
-            printText("Already joined this campaign.");
+            printText("Campaign joined successfully.");
+            if (result.id) printText(`Campaign ID: ${result.id}`);
           }
-          return;
-        }
-
-        const result = await joinCampaign(
-          baseUrl,
-          accessToken,
-          opts.chainId,
-          opts.address
-        );
-
-        if (opts.json) {
-          printJson(result);
-        } else {
-          printProfileContext(getActiveProfile().address);
-          printText("Campaign joined successfully.");
-          if (result.id) printText(`Campaign ID: ${result.id}`);
-        }
+        });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to join campaign: ${message}`);
@@ -441,73 +501,74 @@ export function createCampaignCommand(): Command {
         progressCmd.help();
         return;
       }
-      const { baseUrl, accessToken } = requireAuthAddress();
 
       try {
-        let running = true;
-        let hasRunOnce = false;
-        let watchStoppedBySignal = false;
-        const stop = () => {
-          running = false;
-          watchStoppedBySignal = true;
-          printText("Stopped watching progress.");
-        };
-
-        if (opts.watch) {
-          process.once("SIGINT", stop);
-        }
-
-        await runWatchLoop(async () => {
-          hasRunOnce = true;
-          const result = await getMyProgress(
-            baseUrl,
-            accessToken,
-            opts.chainId,
-            opts.address
-          );
-
-          if (opts.json) {
-            printJson(result);
-          } else {
-            printProfileContext(getActiveProfile().address);
-            const r = result as Record<string, unknown>;
-            if (r.message) {
-              printText(String(r.message));
-            } else if (
-              "from" in r ||
-              "to" in r ||
-              "my_score" in r ||
-              "my_meta" in r ||
-              "total_meta" in r
-            ) {
-              printCampaignProgressCard(r);
-            } else {
-              for (const [key, value] of Object.entries(r)) {
-                const displayValue =
-                  value !== null && typeof value === "object"
-                    ? JSON.stringify(value)
-                    : String(value);
-                printText(`  ${key}: ${displayValue}`);
-              }
-            }
-          }
+        await runWithCampaignAuthRetry(async ({ baseUrl, accessToken }) => {
+          let running = true;
+          let hasRunOnce = false;
+          let watchStoppedBySignal = false;
+          const stop = () => {
+            running = false;
+            watchStoppedBySignal = true;
+            printText("Stopped watching progress.");
+          };
 
           if (opts.watch) {
-            printText("---");
+            process.once("SIGINT", stop);
           }
-        }, {
-          intervalMs: opts.interval,
-          shouldContinue: () => (opts.watch ? running : !hasRunOnce),
-        });
 
-        if (opts.watch) {
-          process.removeListener("SIGINT", stop);
-          if (watchStoppedBySignal) {
-            process.exitCode = 0;
+          await runWatchLoop(async () => {
+            hasRunOnce = true;
+            const result = await getMyProgress(
+              baseUrl,
+              accessToken,
+              opts.chainId,
+              opts.address
+            );
+
+            if (opts.json) {
+              printJson(result);
+            } else {
+              printProfileContext(getActiveProfile().address);
+              const r = result as Record<string, unknown>;
+              if (r.message) {
+                printText(String(r.message));
+              } else if (
+                "from" in r ||
+                "to" in r ||
+                "my_score" in r ||
+                "my_meta" in r ||
+                "total_meta" in r
+              ) {
+                printCampaignProgressCard(r);
+              } else {
+                for (const [key, value] of Object.entries(r)) {
+                  const displayValue =
+                    value !== null && typeof value === "object"
+                      ? JSON.stringify(value)
+                      : String(value);
+                  printText(`  ${key}: ${displayValue}`);
+                }
+              }
+            }
+
+            if (opts.watch) {
+              printText("---");
+            }
+          }, {
+            intervalMs: opts.interval,
+            shouldContinue: () => (opts.watch ? running : !hasRunOnce),
+          });
+
+          if (opts.watch) {
+            process.removeListener("SIGINT", stop);
+            if (watchStoppedBySignal) {
+              process.exitCode = 0;
+            }
+          } else {
+            return;
           }
-        } else {
-          return;
-        }
+        });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         printText(`Failed to get progress: ${message}`);
