@@ -115,7 +115,7 @@ These checks are profile-aware and resolve identity from the explicitly selected
 
 ### Watch and export helpers
 
-- `src/lib/watch.ts` drives repeated polling for `campaign progress --watch`.
+- `src/lib/watch.ts` drives repeated polling for `campaign progress --watch` and `campaign leaderboard --watch`.
 - `src/lib/export.ts` formats dashboard export rows for CSV output.
 
 ## Output model

@@ -587,6 +587,8 @@ export function createCampaignCommand(): Command {
       "rewards"
     )
     .option("-l, --limit <n>", "Max results", Number, 20)
+    .option("--watch", "Poll continuously")
+    .option("--interval <seconds>", "Polling interval in seconds", Number, 10)
     .option("--json", "Output as JSON")
     .action(async (opts) => {
       if (!opts.address) {
@@ -595,35 +597,65 @@ export function createCampaignCommand(): Command {
       }
       try {
         const baseUrl = loadConfig().recordingApiUrl.replace(/\/+$/, "");
-        const result = await getLeaderboard(
-          baseUrl,
-          opts.chainId,
-          opts.address,
-          opts.rankBy,
-          opts.limit
-        );
+        let running = true;
+        let hasRunOnce = false;
+        let watchStoppedBySignal = false;
+        const stop = () => {
+          running = false;
+          watchStoppedBySignal = true;
+          printText("Stopped watching leaderboard.");
+        };
 
-        if (opts.json) {
-          printJson(result);
-        } else {
-          const entries = result.data ?? [];
-          if (entries.length === 0) {
-            printText("No leaderboard entries.");
+        if (opts.watch) {
+          process.once("SIGINT", stop);
+        }
+
+        await runWatchLoop(async () => {
+          hasRunOnce = true;
+          const result = await getLeaderboard(
+            baseUrl,
+            opts.chainId,
+            opts.address,
+            opts.rankBy,
+            opts.limit
+          );
+
+          if (opts.json) {
+            printJson(result);
           } else {
-            printText(`Leaderboard (${opts.rankBy}):\n`);
-            printText(
-              `  total: ${formatMetricValue(result.total)}  updated: ${formatCampaignTimestamp(result.updated_at ?? undefined)}`
-            );
-            printText("");
-            entries.forEach((entry, i) => {
-              const parts = [
-                `score: ${formatMetricValue(entry.score)}`,
-                `result: ${formatMetricValue(entry.result)}`,
-                `reward: ${formatMetricValue(entry.estimated_reward)}`,
-              ];
-              printText(`  ${i + 1}. ${entry.address}`);
-              printText(`     ${parts.join("  ")}`);
-            });
+            const entries = result.data ?? [];
+            if (entries.length === 0) {
+              printText("No leaderboard entries.");
+            } else {
+              printText(`Leaderboard (${opts.rankBy}):\n`);
+              printText(
+                `  total: ${formatMetricValue(result.total)}  updated: ${formatCampaignTimestamp(result.updated_at ?? undefined)}`
+              );
+              printText("");
+              entries.forEach((entry, i) => {
+                const parts = [
+                  `score: ${formatMetricValue(entry.score)}`,
+                  `result: ${formatMetricValue(entry.result)}`,
+                  `reward: ${formatMetricValue(entry.estimated_reward)}`,
+                ];
+                printText(`  ${i + 1}. ${entry.address}`);
+                printText(`     ${parts.join("  ")}`);
+              });
+            }
+          }
+
+          if (opts.watch) {
+            printText("---");
+          }
+        }, {
+          intervalMs: opts.interval * 1000,
+          shouldContinue: () => (opts.watch ? running : !hasRunOnce),
+        });
+
+        if (opts.watch) {
+          process.removeListener("SIGINT", stop);
+          if (watchStoppedBySignal) {
+            process.exitCode = 0;
           }
         }
       } catch (err: unknown) {

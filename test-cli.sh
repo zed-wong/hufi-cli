@@ -220,6 +220,8 @@ run "auth --help" auth --help
 run "campaign --help" campaign --help
 run_expect "campaign progress --help has watch" "--watch" campaign progress --help
 run_expect "campaign progress --help has interval" "--interval" campaign progress --help
+run_expect "campaign leaderboard --help has watch" "--watch" campaign leaderboard --help
+run_expect "campaign leaderboard --help has interval" "--interval" campaign leaderboard --help
 run "exchange --help" exchange --help
 run "staking --help" staking --help
 run "dashboard --help" dashboard --help

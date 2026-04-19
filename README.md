@@ -92,6 +92,8 @@ hufi-cli campaign progress --address 0x...                      # your progress
 hufi-cli campaign progress --address 0x... --watch              # live updates (polling)
 hufi-cli campaign progress --address 0x... --watch --interval 3000
 hufi-cli campaign leaderboard --address 0x...                   # leaderboard
+hufi-cli campaign leaderboard --address 0x... --watch           # live leaderboard updates
+hufi-cli campaign leaderboard --address 0x... --watch --interval 5
 ```
 
 `campaign list` and `campaign get` print exact campaign timestamps and round token balances for human-readable text output.

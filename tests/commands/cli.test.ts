@@ -123,6 +123,13 @@ describe("CLI help", () => {
     expect(stdout).toContain("--watch");
     expect(stdout).toContain("--interval <ms>");
   });
+
+  test("campaign leaderboard --help shows watch options", async () => {
+    const { code, stdout } = await runCli(["campaign", "leaderboard", "--help"]);
+    expect(code).toBe(0);
+    expect(stdout).toContain("--watch");
+    expect(stdout).toContain("--interval <seconds>");
+  });
 });
 
 describe("auth commands", () => {
